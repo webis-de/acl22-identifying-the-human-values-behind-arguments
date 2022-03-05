@@ -1,0 +1,13 @@
+# action.yml
+name: 'Torch Docker'
+description: 'Creates python environment with torch'
+inputs:
+  python-file:  # id of input
+    description: 'Main python file'
+    required: true
+    default: 'main.py'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - '../${{ inputs.python-file }}'

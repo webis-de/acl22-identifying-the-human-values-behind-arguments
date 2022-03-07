@@ -1,4 +1,0 @@
-transformers==4.9.1
-datasets==1.10.2
-sklearn
-pandas

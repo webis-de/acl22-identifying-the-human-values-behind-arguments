@@ -1,19 +1,31 @@
 import os
 import traceback
 import pandas as pd
+import json
 
 
-"""
-Reads in a .tsv with pandas through a given path and returns it as a DataFrame object
-:param dirname:     name of the directory which stores the .tsv
-:param filename:    name of the .tsv
-:return:            return of the .tsv as a DataFrame
-"""
-def load_tsv_dataframe(dirname, filename):
-    CURR_DIR = os.getcwd()
+def load_json_file(filepath):
+    return json.load(open(filepath))
+
+
+def load_arguments_from_tsv(filepath):
     try:
-        path = os.path.join(CURR_DIR, dirname, filename)
-        dataframe = pd.read_csv(path, encoding='utf-8', sep='\t', header=0)
+        dataframe = pd.read_csv(filepath, encoding='utf-8', sep='\t', header=0)
+        if not {'Argument ID', 'Premise'}.issubset(set(dataframe.columns.values)):
+            raise AttributeError('The argument "%s" file does not contain the minimum required columns [Argument ID, Premise].' % filepath)
+        if 'Usage' not in dataframe.columns.values:
+            dataframe['Usage'] = ['test'] * len(dataframe)
         return dataframe
     except IOError:
         traceback.print_exc()
+
+
+def load_labels_from_tsv(filepath, label_order):
+    try:
+        dataframe = pd.read_csv(filepath, encoding='utf-8', sep='\t', header=0)
+        dataframe = dataframe[['Argument ID'] + label_order]
+        return dataframe
+    except IOError:
+        traceback.print_exc()
+    except KeyError:
+        raise AttributeError('The file "%s" does not contain the required columns for its level.' % filepath)

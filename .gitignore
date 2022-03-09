@@ -17,5 +17,4 @@ __pycache__
 ######################
 # Project Specific
 ######################
-output.txt
-data/bert_models
+data/models

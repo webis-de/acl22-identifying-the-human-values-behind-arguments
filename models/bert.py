@@ -70,14 +70,13 @@ def convert_to_dataset(train_dataframe, test_dataframe):
     ds['train'] = train_dataset
     ds['test'] = test_dataset
 
-    ds = ds.remove_columns(['Conclusion', 'Stance', 'Part'])
+    ds = ds.remove_columns(['Argument ID', 'Conclusion', 'Stance', 'Part'])
 
     ds = ds.map(lambda x: {"labels": [int(x[c]) for c in ds['train'].column_names if
                                       c not in ['Argument ID', 'Conclusion', 'Stance', 'Premise', 'Part']]})
 
     cols = ds['train'].column_names
     cols.remove('labels')
-    cols.remove('Argument ID')
 
     ds_enc = ds.map(tokenize_and_encode, batched=True, remove_columns=cols)
 
@@ -89,42 +88,46 @@ def convert_to_dataset(train_dataframe, test_dataframe):
 tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
 
-def predict_bert_model(dataframe, output_dir, model):
-    ds, labels = convert_to_dataset(dataframe, dataframe)
+def load_model_from_data_dir(model_dir, num_labels):
+    model = AutoModelForSequenceClassification.from_pretrained(model_dir, num_labels=num_labels)
+    if torch.cuda.is_available():
+        return model.to('cuda')
+    return model
+
+
+def predict_bert_model(dataframe, model_dir, num_labels):
+    ds, no_labels = convert_to_dataset(dataframe, dataframe)
+    ds = ds.remove_columns(['labels'])
+
     batch_size = 8
     args = TrainingArguments(
-        output_dir=output_dir,
+        output_dir=model_dir,
         do_train=False,
         do_eval=False,
         do_predict=True,
-        evaluation_strategy="epoch",
-        learning_rate=2e-5,
-        per_device_train_batch_size=batch_size,
-        per_device_eval_batch_size=batch_size,
-        num_train_epochs=20,
-        weight_decay=0.01
+        per_device_eval_batch_size=batch_size
     )
 
-    print("===> Predicting...")
+    model = load_model_from_data_dir(model_dir, num_labels=num_labels)
+
     multi_trainer = MultilabelTrainer(
         model,
         args,
-        train_dataset=ds['train'],
-        eval_dataset=ds['train'],
-        compute_metrics=lambda x: compute_metrics(x, labels),
         tokenizer=tokenizer
     )
 
     return multi_trainer.predict(ds['train'])
 
 
-def train_bert_model(train_dataframe, test_dataframe, output_dir, num_train_epochs=1):
+def train_bert_model(train_dataframe, model_dir, test_dataframe=None, num_train_epochs=20):
+    if test_dataframe is None:
+        test_dataframe = train_dataframe
     ds, labels = convert_to_dataset(train_dataframe, test_dataframe)
 
     batch_size = 8
 
     args = TrainingArguments(
-        output_dir=output_dir,
+        output_dir=model_dir,
         evaluation_strategy="steps",
         learning_rate=2e-5,
         per_device_train_batch_size=batch_size,
@@ -135,9 +138,8 @@ def train_bert_model(train_dataframe, test_dataframe, output_dir, num_train_epoc
         metric_for_best_model='marco-avg-f1score'
     )
 
-    model = AutoModelForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=len(labels))
+    model = load_model_from_data_dir("bert-base-uncased", num_labels=len(labels))
 
-    print("===> Training...")
     multi_trainer = MultilabelTrainer(
         model,
         args,
@@ -149,6 +151,6 @@ def train_bert_model(train_dataframe, test_dataframe, output_dir, num_train_epoc
 
     multi_trainer.train()
 
-    model.save_pretrained(output_dir)
+    model.save_pretrained(model_dir)
 
     return model

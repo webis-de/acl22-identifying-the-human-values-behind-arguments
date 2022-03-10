@@ -65,3 +65,14 @@ sudo docker run --rm -it --init \
 --volume="$PWD:/app" \
 acl22_values:no_cuda python predict.py -a "./custom_dir/corpus" -s
 ```
+
+### Evaluate the predictions
+
+```bash
+$ Rscript Evaluation.R [OPTIONS]
+```
+
+* `OPTIONS` are:
+  * `-a, --argument-dir string` specifies the folder containing the prediction and argument files... (default is `./data/`)
+  * `--absent-labels` to include the absent labels on each dataset part into the evaluation
+  * `-h, --help` displays the help text

@@ -9,6 +9,11 @@ import pandas as pd
 import numpy as np
 
 
+class PickleError(AssertionError):
+    """Error indicating that pickle retrieved unexpected code."""
+    pass
+
+
 def load_all_svms(filename):
     with open(filename, "rb") as f:
         while True:
@@ -19,13 +24,23 @@ def load_all_svms(filename):
 
 
 def predict_svm(dataframe, labels, model_file):
+    """
+
+    :param dataframe:
+    :param labels:
+    :param model_file:
+    :raises PickleError: if the specified model_file does not contain sklearn Pipelines
+    :return:
+    """
     input_vector = dataframe['Premise']
-    df_model_predictions = []
+    df_model_predictions = {}
 
     for i, svm in enumerate(load_all_svms(model_file)):
-        if not isinstance(svm, LinearSVC):
-            print('Error during pickle of SVM from file "%s"' % model_file)
-        df_model_predictions.append(svm.predict(input_vector))
+        if not isinstance(svm, Pipeline):
+            raise PickleError(
+                'The data read from file "{}" via pickle does not have the expected type. To prevent the execution of potentially malicious code this portion of the execution is skipped.'.format(
+                    model_file))
+        df_model_predictions[labels[i]] = svm.predict(input_vector)
 
     return pd.DataFrame(df_model_predictions, columns=labels)
 
@@ -45,7 +60,7 @@ def train_svm(train_dataframe, labels, model_file, test_dataframe=None):
             svm.fit(train_input_vector, train_dataframe[label_name])
             if test_dataframe is not None:
                 valid_pred = svm.predict(valid_input_vector)
-                f1_scores[label_name] = round(f1_score(test_dataframe[label_name], valid_pred), 2)
+                f1_scores[label_name] = round(f1_score(test_dataframe[label_name], valid_pred, zero_division=0), 2)
             pickle.dump(svm, f)
 
     if test_dataframe is not None:

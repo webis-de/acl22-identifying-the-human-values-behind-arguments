@@ -33,7 +33,7 @@ def f1_score_per_label(y_pred, y_true, value_classes, thresh=0.5, sigmoid=True):
 
     f1_scores = {}
     for i, v in enumerate(value_classes):
-        f1_scores[v] = round(f1_score(y_true[:, i], y_pred[:, i]), 2)
+        f1_scores[v] = round(f1_score(y_true[:, i], y_pred[:, i], zero_division=0), 2)
 
     f1_scores['avg-f1-score'] = round(np.mean(list(f1_scores.values())), 2)
 
@@ -152,5 +152,8 @@ def train_bert_model(train_dataframe, model_dir, test_dataframe=None, num_train_
     multi_trainer.train()
 
     model.save_pretrained(model_dir)
+
+    if test_dataframe is not None:
+        return multi_trainer.evaluate()
 
     return model

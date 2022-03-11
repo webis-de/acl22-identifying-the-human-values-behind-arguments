@@ -2,8 +2,9 @@ import sys
 import getopt
 import os
 
-from setup import (load_json_file, load_arguments_from_tsv, load_labels_from_tsv, combine_columns, split_arguments)
-from models import (train_bert_model, train_svm)
+from components.python_components.setup import (load_json_file, load_arguments_from_tsv, load_labels_from_tsv,
+                                                combine_columns, split_arguments)
+from components.python_components.models import (train_bert_model, train_svm)
 
 help_string = '\nUsage:  training.py [OPTIONS]' \
               '\n' \
@@ -45,11 +46,13 @@ def main(argv):
         elif opt in ('-v', '--validate'):
             validate = True
 
-    # Check training directory
+    svm_dir = os.path.join(model_dir, 'svm')
+
+    # Check argument directory
     if not os.path.isdir(argument_dir):
         print('The specified argument directory "%s" does not exist' % argument_dir)
         sys.exit(2)
-    # TODO: training files are not present
+    # TODO: argument files are not present
 
     # Check model directory
     if os.path.isfile(model_dir):
@@ -57,9 +60,17 @@ def main(argv):
         sys.exit(2)
     if os.path.isdir(model_dir) and len(os.listdir(model_dir)) > 0:
         print('The specified <model-dir> "%s" already exists and contains files' % model_dir)
-        decision = input('Do You still want to proceed? [y/n] ').lower()
+        decision = input('Do You still want to proceed? [y/n]\n').lower()
         if decision != 'y':
             sys.exit(-1)
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+
+    if run_svm and not os.path.isdir(svm_dir):
+        if os.path.exists(svm_dir):
+            print('Unable to create svm directory at "%s"' % svm_dir)
+        else:
+            os.mkdir(svm_dir)
 
     # load arguments
     argument_filepath = os.path.join(argument_dir, 'arguments.tsv')
@@ -99,9 +110,11 @@ def main(argv):
     for i in range(num_levels):
         print("===> Bert: Training Level %s..." % levels[i])
         if validate:
-            bert_model = train_bert_model(df_train_all[i], os.path.join(model_dir, 'bert_train_level' + levels[i]),
-                                          test_dataframe=df_valid_all[i])
-            # f1-scores...
+            bert_model_evaluation = train_bert_model(df_train_all[i],
+                                                     os.path.join(model_dir, 'bert_train_level' + levels[i]),
+                                                     test_dataframe=df_valid_all[i])
+            print("F1-Scores for Level %s:" % levels[i])
+            print(bert_model_evaluation['eval_f1-score'])
         else:
             train_bert_model(df_train_all[i], os.path.join(model_dir, 'bert_train_level' + levels[i]))
 
@@ -112,7 +125,8 @@ def main(argv):
                 svm_f1_scores = train_svm(df_train_all[i], value_json[levels[i]],
                                           os.path.join(model_dir, 'svm/svm_train_level' + levels[i] + '.sav'),
                                           test_dataframe=df_valid_all[i])
-                # f1-scores...
+                print("F1-Scores for Level %s:" % levels[i])
+                print(svm_f1_scores)
             else:
                 train_svm(df_train_all[i], value_json[levels[i]],
                           os.path.join(model_dir, 'svm/svm_train_level' + levels[i] + '.sav'))

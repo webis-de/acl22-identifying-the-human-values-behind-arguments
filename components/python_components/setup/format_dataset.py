@@ -2,9 +2,7 @@ import pandas as pd
 
 
 def combine_columns(df_arguments, df_labels):
-    df = pd.merge(df_arguments, df_labels, on='Argument ID')
-    
-    return df
+    return pd.merge(df_arguments, df_labels, on='Argument ID')
 
 
 def split_arguments(df_arguments):

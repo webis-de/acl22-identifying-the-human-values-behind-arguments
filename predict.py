@@ -3,9 +3,9 @@ import getopt
 import os
 import pandas as pd
 
-from setup import (load_json_file, load_arguments_from_tsv, split_arguments,
-                   write_tsv_dataframe, create_dataframe_head)
-from models import (predict_bert_model, predict_one_baseline, predict_svm)
+from components.python_components.setup import (load_json_file, load_arguments_from_tsv, split_arguments,
+                                                write_tsv_dataframe, create_dataframe_head)
+from components.python_components.models import (predict_bert_model, predict_one_baseline, predict_svm, PickleError)
 
 help_string = '\nUsage:  predict.py [OPTIONS]' \
               '\n' \
@@ -84,14 +84,17 @@ def main(argv):
 
     # predict with SVM
     if run_svm:
-        df_svm = create_dataframe_head(df_test['Argument ID'], model_name='SVM')
-        for i in range(num_levels):
-            print("===> SVM: Predicting Level %s..." % levels[i])
-            result = predict_svm(df_test, value_json[levels[i]],
-                                 os.path.join(model_dir, 'svm/svm_train_level' + levels[i] + '.sav'))
-            df_svm = pd.concat([df_svm, result], axis=1)
+        try:
+            df_svm = create_dataframe_head(df_test['Argument ID'], model_name='SVM')
+            for i in range(num_levels):
+                print("===> SVM: Predicting Level %s..." % levels[i])
+                result = predict_svm(df_test, value_json[levels[i]],
+                                     os.path.join(model_dir, 'svm/svm_train_level' + levels[i] + '.sav'))
+                df_svm = pd.concat([df_svm, result], axis=1)
 
-        df_prediction = pd.concat([df_prediction, df_svm])
+            df_prediction = pd.concat([df_prediction, df_svm])
+        except PickleError as error:
+            print(repr(error))
 
     # predict with 1-Baseline
     if run_one_baseline:

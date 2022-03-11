@@ -1,3 +1,5 @@
+library(rlang)
+
 ##### User Interface #####
 
 args = commandArgs(trailingOnly=TRUE)
@@ -55,7 +57,7 @@ levels <- c("1", "2", "3", "4a", "4b")
 
 ##### Load components #####
 
-source('components/Metrics.R')
+source('components/r_components/Metrics.R')
 
 ###########################
 
@@ -63,6 +65,8 @@ source('components/Metrics.R')
 ##### Setup #####
 
 `%notin%` <- Negate(`%in%`)
+
+cat('===> Loading files...')
 
 data.arguments = read.csv(arguments_filepath, sep = '\t')
 data.predictions = read.csv(prediction_filepath, sep = '\t')
@@ -77,10 +81,31 @@ data.predictions <- data.predictions[data.predictions$Argument.ID %in% data.argu
 has.parts = TRUE
 has.methods = TRUE
 
+# store usable levels
+actual.levels <- c()
+
 data.labels.all <- list()
 for (i in 1:length(levels)) {
-  data.labels.all[[i]] <- read.csv(file.path(dir, paste('labels-level', levels[i], '.tsv', sep = '')), sep = '\t')
-  data.labels.all[[i]] <- (data.labels.all[[i]])[data.labels.all[[i]]$Argument.ID %in% data.arguments.filtered$Argument.ID,]
+  label.file.path = file.path(dir, paste('labels-level', levels[i], '.tsv', sep = ''))
+  if (file.exists(label.file.path)) {
+    read_labels <- read.csv(label.file.path, sep = '\t')
+    read_labels <- read_labels[read_labels$Argument.ID %in% data.arguments.filtered$Argument.ID,]
+    read_labels <- read_labels[,names(read_labels) %in% names(data.predictions)]
+    if (length(names(read_labels)) > 1) {
+      data.labels.all[[levels[i]]] <- read_labels
+      actual.levels <- c(actual.levels, levels[i])
+    }
+  }
+  else {
+    cat(paste('No file for level ', levels[i], ' found.', sep = ''))
+  }
+}
+
+levels <- actual.levels
+
+if (length(levels) == 0) {
+  cat("For all levels the required files were either absent or don't apply on the predictions. No evaluation can be made.")
+  exit()
 }
 
 if ('Part' %in% colnames(data.arguments)) {
@@ -113,7 +138,7 @@ if (!absent_labels) {
     absent.labels <- c()
     for (j in 1:length(levels)) {
       
-      active.labels <- data.labels.all[[j]]
+      active.labels <- data.labels.all[[levels[j]]]
       active.labels <- active.labels[active.labels$Argument.ID %in% (
         data.predictions[data.predictions$dataset == datasetNames[i],"Argument.ID"]
         ),]
@@ -122,7 +147,9 @@ if (!absent_labels) {
       cSums <- colSums(active.labels)
       absent.labels <- c(absent.labels, names(cSums)[which(cSums == 0)])
     }
-    absent.label.list[[datasetNames[i]]] <- absent.labels
+    if (!is_empty(absent.labels)) {
+      absent.label.list[[datasetNames[i]]] <- absent.labels
+    }
   }
 }
 
@@ -131,10 +158,12 @@ if (!absent_labels) {
 
 ##### Execute evaluation #####
 
+cat('===> Evaluating predictions...')
+
 data.evaluation <- NULL
 
 for (i in 1:length(levels)) {
-  data.labels <- data.labels.all[[i]]
+  data.labels <- data.labels.all[[levels[i]]]
   for (j in 1:length(data.methods)) {
     data.method.datasets <- split(data.methods[[j]], (data.methods[[j]])$dataset)
     for (k in 1:length(data.method.datasets)) {
@@ -196,8 +225,8 @@ if (has.methods) {
 
 
 ##### Output final evaluation #####
-
 evaluation_filepath = file.path(dir, 'evaluation.tsv')
+cat(paste('===> Writing evaluation to: ', evaluation_filepath, sep = ''))
 write.table(data.evaluation, evaluation_filepath, sep = '\t', row.names = F, quote = F, col.names = T)
 
 ###################################

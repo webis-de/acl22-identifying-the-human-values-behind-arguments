@@ -52,7 +52,6 @@ def main(argv):
     if not os.path.isdir(argument_dir):
         print('The specified argument directory "%s" does not exist' % argument_dir)
         sys.exit(2)
-    # TODO: argument files are not present
 
     # Check model directory
     if os.path.isfile(model_dir):
@@ -72,25 +71,52 @@ def main(argv):
         else:
             os.mkdir(svm_dir)
 
-    # load arguments
+    # Check argument directory
+    if not os.path.isdir(argument_dir):
+        print('The specified argument directory "%s" does not exist' % argument_dir)
+        sys.exit(2)
+
     argument_filepath = os.path.join(argument_dir, 'arguments.tsv')
+    value_json_filepath = os.path.join(argument_dir, 'values.json')
+
+    if not os.path.isfile(argument_filepath):
+        print('The required file "arguments.tsv" is not present in the argument directory')
+        sys.exit(2)
+    if not os.path.isfile(value_json_filepath):
+        print('The required file "values.json" is not present in the argument directory')
+        sys.exit(2)
+
+    # load arguments
     df_arguments = load_arguments_from_tsv(argument_filepath)
     if len(df_arguments) < 1:
         print('There are no arguments in file "%s"' % argument_filepath)
         sys.exit(2)
 
-    value_json = load_json_file(os.path.join(argument_dir, 'values.json'))
+    value_json = load_json_file(value_json_filepath)
 
-    levels = value_json['level']
+    try:
+        levels = value_json['level']
+    except KeyError as error:
+        print('Missing attribute "level" in value.json')
+        sys.exit(2)
     num_levels = len(levels)
+
+    # check levels
+    for i in range(num_levels):
+        if levels[i] not in value_json:
+            print('Missing attribute "{}" in value.json'.format(levels[i]))
+            sys.exit(2)
 
     # format dataset
     df_train_all = []
     df_valid_all = []
     for i in range(num_levels):
+        label_filepath = os.path.join(argument_dir, 'labels-level{}.tsv'.format(levels[i]))
+        if not os.path.isfile(label_filepath):
+            print('The required file "labels-level{}.tsv" is not present in the argument directory'.format(levels[i]))
+            sys.exit(2)
         # read labels from .tsv file
-        df_labels = load_labels_from_tsv(os.path.join(argument_dir, 'labels-level' + levels[i] + '.tsv'),
-                                         value_json[levels[i]])
+        df_labels = load_labels_from_tsv(label_filepath, value_json[levels[i]])
         # join arguments and labels
         df_full_level = combine_columns(df_arguments, df_labels)
         # split dataframe by usage
@@ -111,25 +137,25 @@ def main(argv):
         print("===> Bert: Training Level %s..." % levels[i])
         if validate:
             bert_model_evaluation = train_bert_model(df_train_all[i],
-                                                     os.path.join(model_dir, 'bert_train_level' + levels[i]),
+                                                     os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
                                                      test_dataframe=df_valid_all[i])
             print("F1-Scores for Level %s:" % levels[i])
             print(bert_model_evaluation['eval_f1-score'])
         else:
-            train_bert_model(df_train_all[i], os.path.join(model_dir, 'bert_train_level' + levels[i]))
+            train_bert_model(df_train_all[i], os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])))
 
     if run_svm:
         for i in range(num_levels):
             print("===> SVM: Training Level %s..." % levels[i])
             if validate:
                 svm_f1_scores = train_svm(df_train_all[i], value_json[levels[i]],
-                                          os.path.join(model_dir, 'svm/svm_train_level' + levels[i] + '.sav'),
+                                          os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i])),
                                           test_dataframe=df_valid_all[i])
                 print("F1-Scores for Level %s:" % levels[i])
                 print(svm_f1_scores)
             else:
                 train_svm(df_train_all[i], value_json[levels[i]],
-                          os.path.join(model_dir, 'svm/svm_train_level' + levels[i] + '.sav'))
+                          os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i])))
 
 
 if __name__ == '__main__':

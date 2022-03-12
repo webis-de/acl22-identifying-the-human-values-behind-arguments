@@ -4,11 +4,9 @@ from datasets import (Dataset, DatasetDict, load_dataset)
 from transformers import (AutoTokenizer, AutoModelForSequenceClassification,
                           PreTrainedModel, BertModel, BertForSequenceClassification,
                           TrainingArguments, Trainer)
-from transformers.modeling_outputs import SequenceClassifierOutput
 from sklearn.metrics import f1_score
 
 import numpy as np
-import pandas as pd
 
 
 def accuracy_thresh(y_pred, y_true, thresh=0.5, sigmoid=True):
@@ -17,8 +15,6 @@ def accuracy_thresh(y_pred, y_true, thresh=0.5, sigmoid=True):
     if sigmoid:
         y_pred = y_pred.sigmoid()
 
-    # print(y_true.bool())
-    # print((y_pred>thresh))
     return ((y_pred > thresh) == y_true.bool()).float().mean().item()
 
 

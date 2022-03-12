@@ -51,23 +51,57 @@ def main(argv):
     if not os.path.isdir(argument_dir):
         print('The specified argument directory "%s" does not exist' % argument_dir)
         sys.exit(2)
-    # TODO: argument files are not present
 
+    argument_filepath = os.path.join(argument_dir, 'arguments.tsv')
+    value_json_filepath = os.path.join(argument_dir, 'values.json')
+
+    if not os.path.isfile(argument_filepath):
+        print('The required file "arguments.tsv" is not present in the argument directory')
+        sys.exit(2)
+    if not os.path.isfile(value_json_filepath):
+        print('The required file "values.json" is not present in the argument directory')
+        sys.exit(2)
+
+    # load arguments
+    df_arguments = load_arguments_from_tsv(argument_filepath)
+    if len(df_arguments) < 1:
+        print('There are no arguments in file "%s"' % argument_filepath)
+        sys.exit(2)
+
+    value_json = load_json_file(value_json_filepath)
+
+    try:
+        levels = value_json['level']
+    except KeyError as error:
+        print('Missing attribute "level" in value.json')
+        sys.exit(2)
+    num_levels = len(levels)
+
+    # check levels
+    for i in range(num_levels):
+        if levels[i] not in value_json:
+            print('Missing attribute "{}" in value.json'.format(levels[i]))
+            sys.exit(2)
+
+    # check model directory
     if not os.path.isdir(model_dir):
         print('The specified <model-dir> "%s" does not exist' % model_dir)
         sys.exit(2)
-    # TODO: model save files not present
 
-    # load arguments
-    df_arguments = load_arguments_from_tsv(os.path.join(argument_dir, 'arguments.tsv'))
-
-    value_json = load_json_file(os.path.join(argument_dir, 'values.json'))
-
-    levels = value_json['level']
-    num_levels = len(levels)
+    for i in range(num_levels):
+        if not os.path.exists(os.path.join(model_dir, 'bert_train_level{}'.format(levels[i]))):
+            print('Missing saved Bert model for level "{}"'.format(levels[i]))
+            sys.exit(2)
+        if run_svm and not os.path.exists(os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i]))):
+            print('Missing saved SVM models for level "{}"'.format(levels[i]))
+            sys.exit(2)
 
     # format dataset
     _, _, df_test = split_arguments(df_arguments)
+
+    if len(df_test) < 1:
+        print('There are no arguments listed for prediction.')
+        sys.exit()
 
     # predict with Bert model
     if run_svm or run_one_baseline:
@@ -77,8 +111,8 @@ def main(argv):
 
     for i in range(num_levels):
         print("===> Bert: Predicting Level %s..." % levels[i])
-        result = predict_bert_model(df_test,
-                                    os.path.join(model_dir, 'bert_train_level' + levels[i]), len(value_json[levels[i]]))
+        result = predict_bert_model(df_test, os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
+                                    len(value_json[levels[i]]))
         bert_prediction = 1 * (result.predictions > 0.5)
         df_prediction = pd.concat([df_prediction, pd.DataFrame(bert_prediction, columns=value_json[levels[i]])], axis=1)
 
@@ -89,7 +123,7 @@ def main(argv):
             for i in range(num_levels):
                 print("===> SVM: Predicting Level %s..." % levels[i])
                 result = predict_svm(df_test, value_json[levels[i]],
-                                     os.path.join(model_dir, 'svm/svm_train_level' + levels[i] + '.sav'))
+                                     os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i])))
                 df_svm = pd.concat([df_svm, result], axis=1)
 
             df_prediction = pd.concat([df_prediction, df_svm])

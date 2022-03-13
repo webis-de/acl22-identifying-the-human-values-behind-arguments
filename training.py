@@ -96,7 +96,7 @@ def main(argv):
 
     try:
         levels = value_json['level']
-    except KeyError as error:
+    except KeyError:
         print('Missing attribute "level" in value.json')
         sys.exit(2)
     num_levels = len(levels)

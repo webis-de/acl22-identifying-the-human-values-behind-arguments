@@ -14,8 +14,21 @@ class PickleError(AssertionError):
     pass
 
 
-def load_all_svms(filename):
-    with open(filename, "rb") as f:
+def load_all_svms(model_file):
+    """
+        Creates a generator for the Support Vector Machines (SVMs) in `model_file`
+
+        Parameters
+        ----------
+        model_file: str
+            Name of the save file for stored SVMs
+
+        Yields
+        ------
+        Pipeline
+            Collected sklearn Pipeline
+        """
+    with open(model_file, "rb") as f:
         while True:
             try:
                 yield pickle.load(f)
@@ -25,13 +38,27 @@ def load_all_svms(filename):
 
 def predict_svm(dataframe, labels, model_file):
     """
+        Classifies each argument in the dataframe using the trained Support Vector Machines (SVMs) in the `model_file`
 
-    :param dataframe:
-    :param labels:
-    :param model_file:
-    :raises PickleError: if the specified model_file does not contain sklearn Pipelines
-    :return:
-    """
+        Parameters
+        ----------
+        dataframe : pd.DataFrame
+            The arguments to be classified
+        labels : list[str]
+            The listing of all labels
+        model_file: str
+            The file containing the serialized SVM models
+
+        Returns
+        -------
+        DataFrame
+            the predictions given by the model
+
+        Raises
+        ------
+        PickleError
+            if the specified `model_file` does not contain sklearn Pipelines
+        """
     input_vector = dataframe['Premise']
     df_model_predictions = {}
 
@@ -46,6 +73,27 @@ def predict_svm(dataframe, labels, model_file):
 
 
 def train_svm(train_dataframe, labels, model_file, test_dataframe=None):
+    """
+        Trains Support Vector Machines (SVMs) on the arguments in the train_dataframe and saves them in `model_file`
+
+        Parameters
+        ----------
+        train_dataframe : pd.DataFrame
+            The arguments to be trained on
+        labels : list[str]
+            The listing of all labels
+        model_file: str
+            The file for storing the serialized SVM models
+        test_dataframe : pd.DataFrame, optional
+            The validation arguments (default is None)
+
+        Returns
+        -------
+        dict
+            f1-scores of validation if `test_dataframe` is not None
+        NoneType
+            otherwise
+        """
     train_input_vector = train_dataframe['Premise']
     if test_dataframe is not None:
         valid_input_vector = test_dataframe['Premise']
@@ -66,4 +114,3 @@ def train_svm(train_dataframe, labels, model_file, test_dataframe=None):
     if test_dataframe is not None:
         f1_scores['avg-f1-score'] = round(np.mean(list(f1_scores.values())), 2)
         return f1_scores
-    return None

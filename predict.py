@@ -72,7 +72,7 @@ def main(argv):
 
     try:
         levels = value_json['level']
-    except KeyError as error:
+    except KeyError:
         print('Missing attribute "level" in value.json')
         sys.exit(2)
     num_levels = len(levels)
@@ -113,8 +113,7 @@ def main(argv):
         print("===> Bert: Predicting Level %s..." % levels[i])
         result = predict_bert_model(df_test, os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
                                     len(value_json[levels[i]]))
-        bert_prediction = 1 * (result.predictions > 0.5)
-        df_prediction = pd.concat([df_prediction, pd.DataFrame(bert_prediction, columns=value_json[levels[i]])], axis=1)
+        df_prediction = pd.concat([df_prediction, pd.DataFrame(result, columns=value_json[levels[i]])], axis=1)
 
     # predict with SVM
     if run_svm:

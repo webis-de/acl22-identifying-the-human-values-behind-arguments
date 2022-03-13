@@ -2,9 +2,24 @@
 
 ## Content
 
-Description of repo content goes here...
+### Argument Directory
 
-(Including the `data` folder as default directory)
+The default directory is [`data`](data).
+The argument files are the same as of [https://doi.org/10.5281/zenodo.5657250](https://doi.org/10.5281/zenodo.5657250).
+
+* [`arguments.tsv`](data/arguments.tsv): Each row corresponds to one argument
+  * `Argument ID`: The unique identifier for the argument
+  * `Part`: Name of the containing dataset part from the paper; used in the [evaluation script](#evaluate-the-predictions)
+  * `Usage`: Name of the set the argument is used for in the machine learning experiments; one of "train", "validation" or "test"; if this column is absent all arguments are counted for "test"
+  * `Premise`: Premise text of the argument; the only input used for classification, `Conclusion` and `Stance` are currently ignored
+* [`labels-level1.tsv`](data/labels-level1.tsv) / [`labels-level2.tsv`](data/labels-level2.tsv) / [`labels-level3.tsv`](data/labels-level3.tsv) / [`labels-level4a.tsv`](data/labels-level4a.tsv) / [`labels-level4b.tsv`](data/labels-level4b.tsv): Each row corresponds to one argument
+  * `Argument ID`: The unique identifier for the argument
+  * Other: The column name specifies a label in that level, and the value whether the argument has that label (1) or not (0)
+* [`value.json`](data/values.json):
+  * `levels`: The identifier for each level used in training and prediction
+  * Other: The label names and order corresponding to each level
+
+<img src="./markups/info-markup-requires-retraining.svg" alt="Changes of labels in the value.json require a re-training">
 
 ## Usage
 
@@ -101,6 +116,8 @@ IMAGE_NAME python predict.py [OPTIONS]
   * `-m, --model-dir string` specifies the folder containing the trained models (default is `./data/models`)
   * `-o, --one-baseline` requests the prediction from 1-Baseline
   * `-s, --svm` requests the prediction from trained SVM
+
+<img src="./markups/warning-markup-pickle.svg" alt="Only use serialize files from trustworthy sources.">
 
 Example command:
 

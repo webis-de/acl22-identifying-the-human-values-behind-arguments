@@ -10,6 +10,7 @@ import numpy as np
 
 
 def accuracy_thresh(y_pred, y_true, thresh=0.5, sigmoid=True):
+    """Compute accuracy of predictions"""
     y_pred = torch.from_numpy(y_pred)
     y_true = torch.from_numpy(y_true)
     if sigmoid:
@@ -19,6 +20,7 @@ def accuracy_thresh(y_pred, y_true, thresh=0.5, sigmoid=True):
 
 
 def f1_score_per_label(y_pred, y_true, value_classes, thresh=0.5, sigmoid=True):
+    """Compute label-wise and averaged F1-scores"""
     y_pred = torch.from_numpy(y_pred)
     y_true = torch.from_numpy(y_true)
     if sigmoid:
@@ -37,14 +39,24 @@ def f1_score_per_label(y_pred, y_true, value_classes, thresh=0.5, sigmoid=True):
 
 
 def compute_metrics(eval_pred, value_classes):
+    """Custom metric calculation function for MultiLabelTrainer"""
     predictions, labels = eval_pred
     f1scores = f1_score_per_label(predictions, labels, value_classes)
     return {'accuracy_thresh': accuracy_thresh(predictions, labels), 'f1-score': f1scores,
             'marco-avg-f1score': f1scores['avg-f1-score']}
 
 
-class MultilabelTrainer(Trainer):
+class MultiLabelTrainer(Trainer):
+    """
+        A transformers `Trainer` with custom loss computation
+
+        Methods
+        -------
+        compute_loss(model, inputs, return_outputs=False):
+            Overrides loss computation from Trainer class
+        """
     def compute_loss(self, model, inputs, return_outputs=False):
+        """Custom loss computation"""
         labels = inputs.pop("labels")
         outputs = model(**inputs)
         logits = outputs.logits
@@ -55,10 +67,27 @@ class MultilabelTrainer(Trainer):
 
 
 def tokenize_and_encode(examples):
+    """Tokenizes each arguments "Premise" """
     return tokenizer(examples['Premise'], truncation=True)
 
 
 def convert_to_dataset(train_dataframe, test_dataframe):
+    """
+        Converts pandas DataFrames into a DatasetDict
+
+        Parameters
+        ----------
+        train_dataframe : DataFrame
+            Arguments to be listed as "train"
+        test_dataframe : DataFrame
+            Arguments to be listed as "test"
+
+        Returns
+        -------
+        tuple(DatasetDict, list[str])
+            a `DatasetDict` with attributes "train" and "test" for the listed arguments,
+            a `list` with the contained labels
+        """
     train_dataset = Dataset.from_dict(train_dataframe.to_dict('list'))
     test_dataset = Dataset.from_dict(test_dataframe.to_dict('list'))
 
@@ -85,6 +114,7 @@ tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 
 
 def load_model_from_data_dir(model_dir, num_labels):
+    """Loads Bert model from specified directory and converts to CUDA model if available"""
     model = AutoModelForSequenceClassification.from_pretrained(model_dir, num_labels=num_labels)
     if torch.cuda.is_available():
         return model.to('cuda')
@@ -92,6 +122,23 @@ def load_model_from_data_dir(model_dir, num_labels):
 
 
 def predict_bert_model(dataframe, model_dir, num_labels):
+    """
+        Classifies each argument using the Bert model stored in `model_dir`
+
+        Parameters
+        ----------
+        dataframe: pd.Dataframe
+            The arguments to be classified
+        model_dir: str
+            The directory of the pre-trained Bert model to use
+        num_labels: int
+            The number of labels to predict
+
+        Returns
+        -------
+        np.ndarray
+            numpy nd-array with the predictions given by the model
+        """
     ds, no_labels = convert_to_dataset(dataframe, dataframe)
     ds = ds.remove_columns(['labels'])
 
@@ -106,16 +153,39 @@ def predict_bert_model(dataframe, model_dir, num_labels):
 
     model = load_model_from_data_dir(model_dir, num_labels=num_labels)
 
-    multi_trainer = MultilabelTrainer(
+    multi_trainer = MultiLabelTrainer(
         model,
         args,
         tokenizer=tokenizer
     )
 
-    return multi_trainer.predict(ds['train'])
+    prediction = 1 * (multi_trainer.predict(ds['train']).predictions > 0.5)
+
+    return prediction
 
 
 def train_bert_model(train_dataframe, model_dir, test_dataframe=None, num_train_epochs=20):
+    """
+        Trains Bert model with the arguments in `train_dataframe`
+
+        Parameters
+        ----------
+        train_dataframe: pd.DataFrame
+            The arguments to be trained on
+        model_dir: str
+            The directory for storing the trained model
+        test_dataframe: pd.DataFrame, optional
+            The validation arguments (default is None)
+        num_train_epochs: int, optional
+            The number of training epochs (default is 20)
+
+        Returns
+        -------
+        Metrics
+            result of validation if `test_dataframe` is not None
+        NoneType
+            otherwise
+        """
     if test_dataframe is None:
         test_dataframe = train_dataframe
     ds, labels = convert_to_dataset(train_dataframe, test_dataframe)
@@ -136,7 +206,7 @@ def train_bert_model(train_dataframe, model_dir, test_dataframe=None, num_train_
 
     model = load_model_from_data_dir("bert-base-uncased", num_labels=len(labels))
 
-    multi_trainer = MultilabelTrainer(
+    multi_trainer = MultiLabelTrainer(
         model,
         args,
         train_dataset=ds["train"],
@@ -151,5 +221,3 @@ def train_bert_model(train_dataframe, model_dir, test_dataframe=None, num_train_
 
     if test_dataframe is not None:
         return multi_trainer.evaluate()
-
-    return model

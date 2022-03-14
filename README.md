@@ -1,10 +1,12 @@
 # acl22-identifying-the-human-values-behind-arguments
 
+Introduction
+
 ## Content
 
 ### Argument Directory
 
-The default directory is [`data`](data).
+The default argument directory is [`data`](data).
 The argument files are the same as of [https://doi.org/10.5281/zenodo.5657250](https://doi.org/10.5281/zenodo.5657250).
 
 * [`arguments.tsv`](data/arguments.tsv): Each row corresponds to one argument
@@ -12,14 +14,15 @@ The argument files are the same as of [https://doi.org/10.5281/zenodo.5657250](h
   * `Part`: Name of the containing dataset part from the paper; used in the [evaluation script](#evaluate-the-predictions)
   * `Usage`: Name of the set the argument is used for in the machine learning experiments; one of "train", "validation" or "test"; if this column is absent all arguments are counted for "test"
   * `Premise`: Premise text of the argument; the only input used for classification, `Conclusion` and `Stance` are currently ignored
-* [`labels-level1.tsv`](data/labels-level1.tsv) / [`labels-level2.tsv`](data/labels-level2.tsv) / [`labels-level3.tsv`](data/labels-level3.tsv) / [`labels-level4a.tsv`](data/labels-level4a.tsv) / [`labels-level4b.tsv`](data/labels-level4b.tsv): Each row corresponds to one argument
-  * `Argument ID`: The unique identifier for the argument
-  * Other: The column name specifies a label in that level, and the value whether the argument has that label (1) or not (0)
 * [`value.json`](data/values.json):
   * `levels`: The identifier for each level used in training and prediction
   * Other: The label names and order corresponding to each level
+* [`labels-level1.tsv`](data/labels-level1.tsv) / [`labels-level2.tsv`](data/labels-level2.tsv) / [`labels-level3.tsv`](data/labels-level3.tsv) / [`labels-level4a.tsv`](data/labels-level4a.tsv) / [`labels-level4b.tsv`](data/labels-level4b.tsv): Each row corresponds to one argument
+  * `Argument ID`: The unique identifier for the argument
+  * Other: The column name specifies a label in that level (must be the same as in `value.json`), and the value whether the argument has that label (1) or not (0)
 
-<img src="./markups/info-markup-requires-retraining.svg" alt="Changes of labels in the value.json require a re-training">
+| :information_source: | If you change the label order, add, remove, or edit any of the labels in `value.json` you would need to re-train the models in order to make predictions. |
+| :---: | :--- |
 
 ## Usage
 
@@ -65,6 +68,18 @@ $ docker build -f Dockerfiles/Dockerfile_cuda11_3 -t acl22_values:cuda11.3 .
 
 ### Train the models in the Docker container
 
+In order to train the models you need the following files in your
+[argument directory](#argument-directory):
+
+* `arguments.tsv` with the required columns
+  * `Argument ID`
+  * `Premise`
+  * `Usage` being "train" for each training argument (and "validation" for each validation argument)
+* `value.json`
+* `label-levels[X].tsv` for each level `X` used in `value.json`
+
+After that you can run the training script:
+
 ```sh
 sudo docker run --rm -it --init \
 --gpus=all \
@@ -80,7 +95,7 @@ IMAGE_NAME python training.py [OPTIONS]
   The default working directory inside the container is `/app`.
 * `IMAGE_NAME` is the name of your Docker image (either `acl22_values:no_cuda` or `acl22_values:cuda11.3`)
 * `OPTIONS` are:
-  * `-a, --argument-dir string` specifies the folder containing the argument files... (default is `./data/`)
+  * `-a, --argument-dir string` specifies the folder containing the argument files (default is `./data/`)
   * `-h, --help` displays the help text
   * `-m, --model-dir string` specifies the folder containing the trained models (default is `./data/models`)
   * `-s, --svm` requests the prediction from trained SVM
@@ -95,6 +110,17 @@ acl22_values:no_cuda python training.py -a "./custom_dir/corpus" -s -v
 ```
 
 ### Run the prediction script inside the Docker container
+
+In order to predict the values of arguments with the trained models you need the following files in your
+[argument directory](#argument-directory):
+
+* `arguments.tsv` with the required columns
+  * `Argument ID`
+  * `Premise`
+  * `Usage` being "test" for each argument you want to classify (can be omitted, to include all arguments)
+* `value.json` with the same contents used for training
+
+After that you can run the prediction script:
 
 ```sh
 sudo docker run --rm -it --init \
@@ -111,13 +137,14 @@ IMAGE_NAME python predict.py [OPTIONS]
   The default working directory inside the container is `/app`.
 * `IMAGE_NAME` is the name of your Docker image (either `acl22_values:no_cuda` or `acl22_values:cuda11.3`)
 * `OPTIONS` are:
-  * `-a, --argument-dir string` specifies the folder containing the argument files... (default is `./data/`)
+  * `-a, --argument-dir string` specifies the folder containing the argument files (default is `./data/`)
   * `-h, --help` displays the help text
   * `-m, --model-dir string` specifies the folder containing the trained models (default is `./data/models`)
   * `-o, --one-baseline` requests the prediction from 1-Baseline
   * `-s, --svm` requests the prediction from trained SVM
 
-<img src="./markups/warning-markup-pickle.svg" alt="Only use serialize files from trustworthy sources.">
+| :warning: | The Support Vector Machines are loaded and saved using &#8220;pickle&#8221; to de-/serialize the data object from/to:<br/><code>[MODEL_DIR]/svm/svm_train_level[X].sav</code><br/> The files are only checked to contain &#8220;sklearn Pipelines&#8221;.<br/><br/>Only use serialized files from trustworthy sources. |
+| :---: | :--- |
 
 Example command:
 
@@ -129,11 +156,20 @@ acl22_values:no_cuda python predict.py -a "./custom_dir/corpus" -s
 
 ### Evaluate the predictions
 
+To evaluate the predictions made by the models your `arguments.tsv` and your `label-levels[X].tsv` with the
+corresponding true labels
+[prediction step](#run-the-prediction-script-inside-the-docker-container)
+as well as the resulting `predictions.tsv` need to be in your
+[argument directory](#argument-directory).
+
+After that you can run the evaluation script calculating for all used models individually the label-wise
+`Precision`, `Recall`, `F1-Score`, and `Accuracy` as well as their mean for each level:
+
 ```bash
 $ Rscript Evaluation.R [OPTIONS]
 ```
 
 * `OPTIONS` are:
-  * `-a, --argument-dir string` specifies the folder containing the prediction and argument files... (default is `./data/`)
+  * `-a, --argument-dir string` specifies the folder containing the prediction and argument files (default is `./data/`)
   * `--absent-labels` to include the absent labels on each dataset part into the evaluation
   * `-h, --help` displays the help text

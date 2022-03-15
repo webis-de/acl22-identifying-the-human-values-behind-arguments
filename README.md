@@ -1,13 +1,21 @@
 # acl22-identifying-the-human-values-behind-arguments
 
-Introduction
+Machine Learning scripts for the identification of human values behind arguments.
 
-## Content
+[![license](https://img.shields.io/github/license/webis-de/acl22-identifying-the-human-values-behind-arguments)](https://github.com/webis-de/acl22-identifying-the-human-values-behind-arguments/blob/main/LICENSE)
 
-### Argument Directory
+As a first approach on the automatic identification of human values behind arguments the scripts can be used to train
+different machine learning models based on a
+Multi-Level Value-Taxonomy
+and classify new arguments in regards of the human values they concern.
 
-The default argument directory is [`data`](data).
-The argument files are the same as of [https://doi.org/10.5281/zenodo.5657250](https://doi.org/10.5281/zenodo.5657250).
+The available machine learning models are currently Bert and two baseline models (SVM and 1-Baseline).
+
+## Data Directory
+
+The default data directory is [`data`](data).
+The example argument files are the same as of
+[https://doi.org/10.5281/zenodo.5657250](https://doi.org/10.5281/zenodo.5657250).
 
 * [`arguments.tsv`](data/arguments.tsv): Each row corresponds to one argument
   * `Argument ID`: The unique identifier for the argument
@@ -28,7 +36,7 @@ The argument files are the same as of [https://doi.org/10.5281/zenodo.5657250](h
 
 ### Requirements
 
-In order to use this image you must have Docker Engine installed. Instructions
+In order to use the [image](#creating-the-docker-image) you must have Docker Engine installed. Instructions
 for setting up Docker Engine are
 [available on the Docker website](https://docs.docker.com/engine/installation/).
 
@@ -69,7 +77,7 @@ $ docker build -f Dockerfiles/Dockerfile_cuda11_3 -t ghcr.io/webis-de/acl22-valu
 ### Train the models in the Docker container
 
 In order to train the models you need the following files in your
-[argument directory](#argument-directory):
+[data directory](#data-directory):
 
 * `arguments.tsv` with the required columns
   * `Argument ID`
@@ -81,7 +89,7 @@ In order to train the models you need the following files in your
 After that you can run the training script:
 
 ```sh
-sudo docker run --rm -it --init \
+docker run --rm -it --init \
 --gpus=all \
 --volume="$PWD:/app" \
 IMAGE_NAME python training.py [OPTIONS]
@@ -104,7 +112,7 @@ IMAGE_NAME python training.py [OPTIONS]
 Example command:
 
 ```sh
-sudo docker run --rm -it --init \
+docker run --rm -it --init \
 --volume="$PWD:/app" \
 ghcr.io/webis-de/acl22-value-classification:nocuda python training.py -d "./custom_dir/corpus" -c "bs" -v
 ```
@@ -112,7 +120,7 @@ ghcr.io/webis-de/acl22-value-classification:nocuda python training.py -d "./cust
 ### Run the prediction script inside the Docker container
 
 In order to predict the values of arguments with the trained models you need the following files in your
-[argument directory](#argument-directory):
+[data directory](#data-directory):
 
 * `arguments.tsv` with the required columns
   * `Argument ID`
@@ -123,7 +131,7 @@ In order to predict the values of arguments with the trained models you need the
 After that you can run the prediction script:
 
 ```sh
-sudo docker run --rm -it --init \
+docker run --rm -it --init \
 --gpus=all \
 --volume="$PWD:/app" \
 IMAGE_NAME python predict.py [OPTIONS]
@@ -148,7 +156,7 @@ IMAGE_NAME python predict.py [OPTIONS]
 Example command:
 
 ```sh
-sudo docker run --rm -it --init \
+docker run --rm -it --init \
 --volume="$PWD:/app" \
 ghcr.io/webis-de/acl22-value-classification:nocuda python predict.py -d "./custom_dir/corpus" -c "bso"
 ```
@@ -159,7 +167,7 @@ To evaluate the predictions made by the models your `arguments.tsv` and your `la
 corresponding true labels
 [prediction step](#run-the-prediction-script-inside-the-docker-container)
 as well as the resulting `predictions.tsv` need to be in your
-[argument directory](#argument-directory).
+[data directory](#data-directory).
 
 If the column `Part` is present in your `arguments.tsv` the evaluation will be made separately for each
 instance of this column.

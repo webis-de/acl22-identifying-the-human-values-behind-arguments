@@ -162,8 +162,11 @@ corresponding true labels
 as well as the resulting `predictions.tsv` need to be in your
 [argument directory](#argument-directory).
 
+If the column `Part` is present in your `arguments.tsv` the evaluation will be made separately for each
+instance of this column.
+
 After that you can run the evaluation script calculating for all used models individually the label-wise
-`Precision`, `Recall`, `F1-Score`, and `Accuracy` as well as their mean for each level:
+_Precision_, _Recall_, _F1-Score_, and _Accuracy_ as well as their mean for each level:
 
 ```bash
 $ Rscript Evaluation.R [OPTIONS]

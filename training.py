@@ -11,25 +11,27 @@ help_string = '\nUsage:  training.py [OPTIONS]' \
               '\nTrain the BERT model (and optional SVM) on the arguments' \
               '\n' \
               '\nOptions:' \
-              '\n  -a, --argument-dir string  Directory with the argument files (default' \
-              '\n                             WORKING_DIR/data/)' \
-              '\n  -h, --help                 Display help text' \
-              '\n  -m, --model-dir string     Directory for saving the trained models (default' \
-              '\n                             WORKING_DIR/data/models/)' \
-              '\n  -s, --svm                  Set the SVM to be trained as well' \
-              '\n  -v, --validate             Request evaluation after training'
+              '\n  -c, --classifier string  Select classifier: "b" for Bert, "s" for SVM, "bs" for both (default' \
+              '\n                           "b")' \
+              '\n  -d, --data-dir string    Directory with the argument files (default' \
+              '\n                           WORKING_DIR/data/)' \
+              '\n  -h, --help               Display help text' \
+              '\n  -m, --model-dir string   Directory for saving the trained models (default' \
+              '\n                           WORKING_DIR/data/models/)' \
+              '\n  -v, --validate           Request evaluation after training'
 
 
 def main(argv):
     # default values
     curr_dir = os.getcwd()
     model_dir = os.path.join(curr_dir, 'data/models/')
+    run_bert = True
     run_svm = False
     argument_dir = os.path.join(curr_dir, 'data/')
     validate = False
 
     try:
-        opts, args = getopt.gnu_getopt(argv, "a:hm:sv", ["argument-dir", "help", "model-dir=", "svm", "validate"])
+        opts, args = getopt.gnu_getopt(argv, "c:d:hm:v", ["classifier=", "data-dir=", "help", "model-dir=", "validate"])
     except getopt.GetoptError:
         print(help_string)
         sys.exit(2)
@@ -37,12 +39,16 @@ def main(argv):
         if opt in ('-h', '--help'):
             print(help_string)
             sys.exit()
-        elif opt in ('-a', '--argument-dir'):
+        elif opt in ('-c', '--classifier'):
+            run_bert = 'b' in arg.lower()
+            run_svm = 's' in arg.lower()
+            if not run_bert and not run_svm:
+                print('No classifiers selected')
+                sys.exit(2)
+        elif opt in ('-d', '--data-dir'):
             argument_dir = arg
         elif opt in ('-m', '--model-dir'):
             model_dir = arg
-        elif opt in ('-s', '--svm'):
-            run_svm = True
         elif opt in ('-v', '--validate'):
             validate = True
 
@@ -50,7 +56,7 @@ def main(argv):
 
     # Check argument directory
     if not os.path.isdir(argument_dir):
-        print('The specified argument directory "%s" does not exist' % argument_dir)
+        print('The specified data directory "%s" does not exist' % argument_dir)
         sys.exit(2)
 
     # Check model directory
@@ -70,11 +76,6 @@ def main(argv):
             print('Unable to create svm directory at "%s"' % svm_dir)
         else:
             os.mkdir(svm_dir)
-
-    # Check argument directory
-    if not os.path.isdir(argument_dir):
-        print('The specified argument directory "%s" does not exist' % argument_dir)
-        sys.exit(2)
 
     argument_filepath = os.path.join(argument_dir, 'arguments.tsv')
     value_json_filepath = os.path.join(argument_dir, 'values.json')
@@ -133,17 +134,18 @@ def main(argv):
         validate = False
 
     # train bert model
-    for i in range(num_levels):
-        print("===> Bert: Training Level %s..." % levels[i])
-        if validate:
-            bert_model_evaluation = train_bert_model(df_train_all[i],
-                                                     os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
-                                                     value_json[levels[i]], test_dataframe=df_valid_all[i])
-            print("F1-Scores for Level %s:" % levels[i])
-            print(bert_model_evaluation['eval_f1-score'])
-        else:
-            train_bert_model(df_train_all[i], os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
-                             value_json[levels[i]])
+    if run_bert:
+        for i in range(num_levels):
+            print("===> Bert: Training Level %s..." % levels[i])
+            if validate:
+                bert_model_evaluation = train_bert_model(df_train_all[i],
+                                                         os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
+                                                         value_json[levels[i]], test_dataframe=df_valid_all[i])
+                print("F1-Scores for Level %s:" % levels[i])
+                print(bert_model_evaluation['eval_f1-score'])
+            else:
+                train_bert_model(df_train_all[i], os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
+                                 value_json[levels[i]])
 
     if run_svm:
         for i in range(num_levels):

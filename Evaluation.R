@@ -2,49 +2,49 @@ library(rlang)
 
 ##### User Interface #####
 
-args = commandArgs(trailingOnly=TRUE)
+args <- commandArgs(trailingOnly=TRUE)
 
-help_text = paste(
+help_text <- paste(
   '\nUsage:  Evaluation.R [OPTIONS]',
   '',
   'Evaluate the specified predictions in regards to Precision, Recall, F1 and Accuracy.',
   'The scores are calculated for each model every label individually with the mean score for each level.',
   '',
   'Options:',
-  '  -a, --argument-dir string  Directory with the prediction and argument files (default',
-  '                             WORKING_DIR/data/)',
-  '      --absent-labels        Include absent labels from the test dataset into validation',
-  '  -h, --help                 Display help text',
+  '  -a, --absent-labels    Include absent labels from the test dataset into validation',
+  '  -d, --data-dir string  Directory with the prediction and argument files (default',
+  '                         WORKING_DIR/data/)',
+  '  -h, --help             Display help text',
   sep = '\n'
   )
 exit <- function() { invokeRestart("abort") }
 
 # default values
-dir = file.path('./data/')
-absent_labels = FALSE
+dir <- file.path('./data/')
+absent_labels <- FALSE
 
-i = 1
+i <- 1
 while (i <= length(args)) {
-  arg = args[i]
+  arg <- args[i]
   if (arg == "-h" || startsWith("--help", arg)) {
     cat(help_text)
     exit()
-  } else if (arg == "-a" || startsWith("--argument-dir", arg)) {
+  } else if (arg == "-d" || startsWith("--data-dir", arg)) {
     if (i == length(args)) {
-      stop("No argument directory specified", call. = FALSE)
+      stop("No data directory specified", call. = FALSE)
     }
-    dir = file.path(args[i + 1])
-    i = i + 1
-  } else if (startsWith("--absent-labels", arg)) {
-    absent_labels = TRUE
+    dir <- file.path(args[i + 1])
+    i <- i + 1
+  } else if (arg == "-a" || startsWith("--absent-labels", arg)) {
+    absent_labels <- TRUE
   } else {
     stop(help_text, call. = FALSE)
   }
-  i = i + 1
+  i <- i + 1
 }
 
-prediction_filepath = file.path(dir, 'predictions.tsv')
-arguments_filepath = file.path(dir, 'arguments.tsv')
+prediction_filepath <- file.path(dir, 'predictions.tsv')
+arguments_filepath <- file.path(dir, 'arguments.tsv')
 
 if (!file.exists(prediction_filepath)) {
   stop("The specified prediction file does not exist.", call. = FALSE)
@@ -68,25 +68,25 @@ source('components/r_components/Metrics.R')
 
 cat('===> Loading files...\n')
 
-data.arguments = read.csv(arguments_filepath, sep = '\t')
-data.predictions = read.csv(prediction_filepath, sep = '\t')
+data.arguments <- read.csv(arguments_filepath, sep = '\t')
+data.predictions <- read.csv(prediction_filepath, sep = '\t')
 
-data.arguments.filtered = data.arguments[data.arguments$Argument.ID %in% data.predictions$Argument.ID,]
+data.arguments.filtered <- data.arguments[data.arguments$Argument.ID %in% data.predictions$Argument.ID,]
 if ('Usage' %in% colnames(data.arguments)) {
   data.arguments.filtered <- data.arguments.filtered[data.arguments.filtered$Usage == "test",]
 }
 # remove un-predictable arguments
 data.predictions <- data.predictions[data.predictions$Argument.ID %in% data.arguments.filtered$Argument.ID,]
 
-has.parts = TRUE
-has.methods = TRUE
+has.parts <- TRUE
+has.methods <- TRUE
 
 # store usable levels
 actual.levels <- c()
 
 data.labels.all <- list()
 for (i in 1:length(levels)) {
-  label.file.path = file.path(dir, paste('labels-level', levels[i], '.tsv', sep = ''))
+  label.file.path <- file.path(dir, paste('labels-level', levels[i], '.tsv', sep = ''))
   if (file.exists(label.file.path)) {
     read_labels <- read.csv(label.file.path, sep = '\t')
     read_labels <- read_labels[read_labels$Argument.ID %in% data.arguments.filtered$Argument.ID,]
@@ -109,20 +109,20 @@ if (length(levels) == 0) {
 }
 
 if ('Part' %in% colnames(data.arguments)) {
-  datasetNames = unique(data.arguments.filtered$Part)
+  datasetNames <- unique(data.arguments.filtered$Part)
   
   data.predictions$dataset <- sapply(data.predictions$Argument.ID, function(x) {
     c(data.arguments.filtered[data.arguments.filtered$Argument.ID == x,"Part"])
     })
 } else {
-  datasetNames = c("none")
+  datasetNames <- c("none")
   data.predictions$dataset <- c("none")
-  has.parts = FALSE
+  has.parts <- FALSE
 }
 
 if ('Method' %notin% colnames(data.predictions)) {
-  data.predictions$Method = 'Bert'
-  has.methods = FALSE
+  data.predictions$Method <- 'Bert'
+  has.methods <- FALSE
 }
 
 data.methods <- split(data.predictions, data.predictions$Method)
@@ -225,7 +225,7 @@ if (has.methods) {
 
 
 ##### Output final evaluation #####
-evaluation_filepath = file.path(dir, 'evaluation.tsv')
+evaluation_filepath <- file.path(dir, 'evaluation.tsv')
 cat(paste('===> Writing evaluation to: ', evaluation_filepath, '\n', sep = ''))
 write.table(data.evaluation, evaluation_filepath, sep = '\t', row.names = F, quote = F, col.names = T)
 

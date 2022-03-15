@@ -12,25 +12,26 @@ help_string = '\nUsage:  predict.py [OPTIONS]' \
               '\nRequest prediction of the BERT model (and optional SVM / 1-Baseline) for all test arguments' \
               '\n' \
               '\nOptions:' \
-              '\n  -a, --argument-dir string  Directory with the argument files (default' \
-              '\n                             WORKING_DIR/data/)' \
-              '\n  -h, --help                 Display help text' \
-              '\n  -m, --model-dir string     Directory of the trained models (default' \
-              '\n                             WORKING_DIR/data/models/)' \
-              '\n  -o, --one-baseline         Request prediction of 1-Baseline model' \
-              '\n  -s, --svm                  Request prediction of SVM'
+              '\n  -c, --classifier string  Select classifier: "b" for Bert, "s" for SVM, "o" for 1-Baseline,' \
+              '\n                           or combination like "so" (default "b")' \
+              '\n  -d, --data-dir string    Directory with the argument files (default' \
+              '\n                           WORKING_DIR/data/)' \
+              '\n  -h, --help               Display help text' \
+              '\n  -m, --model-dir string   Directory of the trained models (default' \
+              '\n                           WORKING_DIR/data/models/)'
 
 
 def main(argv):
     # default values
     curr_dir = os.getcwd()
     model_dir = os.path.join(curr_dir, 'data/models/')
+    run_bert = True
     run_svm = False
     run_one_baseline = False
     argument_dir = os.path.join(curr_dir, 'data/')
 
     try:
-        opts, args = getopt.gnu_getopt(argv, "a:hm:os", ["argument-dir", "help", "model-dir=", "one-baseline", "svm"])
+        opts, args = getopt.gnu_getopt(argv, "c:d:hm:", ["classifier=", "data-dir=", "help", "model-dir="])
     except getopt.GetoptError:
         print(help_string)
         sys.exit(2)
@@ -38,7 +39,14 @@ def main(argv):
         if opt in ('-h', '--help'):
             print(help_string)
             sys.exit()
-        elif opt in ('-a', '--argument-dir'):
+        elif opt in ('-c', '--classifier'):
+            run_bert = 'b' in arg.lower()
+            run_svm = 's' in arg.lower()
+            run_one_baseline = 'o' in arg.lower()
+            if not run_bert and not run_svm and not run_one_baseline:
+                print('No classifiers selected')
+                sys.exit(2)
+        elif opt in ('-d', '--data-dir'):
             argument_dir = arg
         elif opt in ('-m', '--model-dir'):
             model_dir = arg
@@ -49,7 +57,7 @@ def main(argv):
 
     # Check argument directory
     if not os.path.isdir(argument_dir):
-        print('The specified argument directory "%s" does not exist' % argument_dir)
+        print('The specified data directory "%s" does not exist' % argument_dir)
         sys.exit(2)
 
     argument_filepath = os.path.join(argument_dir, 'arguments.tsv')
@@ -104,16 +112,14 @@ def main(argv):
         sys.exit()
 
     # predict with Bert model
-    if run_svm or run_one_baseline:
-        df_prediction = create_dataframe_head(df_test['Argument ID'], model_name='Bert')
-    else:
-        df_prediction = create_dataframe_head(df_test['Argument ID'])
-
-    for i in range(num_levels):
-        print("===> Bert: Predicting Level %s..." % levels[i])
-        result = predict_bert_model(df_test, os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
-                                    value_json[levels[i]])
-        df_prediction = pd.concat([df_prediction, pd.DataFrame(result, columns=value_json[levels[i]])], axis=1)
+    if run_bert:
+        df_bert = create_dataframe_head(df_test['Argument ID'], model_name='Bert')
+        for i in range(num_levels):
+            print("===> Bert: Predicting Level %s..." % levels[i])
+            result = predict_bert_model(df_test, os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
+                                        value_json[levels[i]])
+            df_bert = pd.concat([df_bert, pd.DataFrame(result, columns=value_json[levels[i]])], axis=1)
+        df_prediction = df_bert
 
     # predict with SVM
     if run_svm:
@@ -125,7 +131,10 @@ def main(argv):
                                      os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i])))
                 df_svm = pd.concat([df_svm, result], axis=1)
 
-            df_prediction = pd.concat([df_prediction, df_svm])
+            if not run_bert:
+                df_prediction = df_svm
+            else:
+                df_prediction = pd.concat([df_prediction, df_svm])
         except PickleError as error:
             print(repr(error))
 
@@ -137,7 +146,10 @@ def main(argv):
             result = predict_one_baseline(df_test, value_json[levels[i]])
             df_one_baseline = pd.concat([df_one_baseline, result], axis=1)
 
-        df_prediction = pd.concat([df_prediction, df_one_baseline])
+        if not run_bert and not run_svm:
+            df_prediction = df_one_baseline
+        else:
+            df_prediction = pd.concat([df_prediction, df_one_baseline])
 
     # write predictions
     print("===> Writing predictions...")

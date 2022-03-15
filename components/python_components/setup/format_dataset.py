@@ -15,7 +15,7 @@ def split_arguments(df_arguments):
     return train_arguments, valid_arguments, test_arguments
 
 
-def create_dataframe_head(argument_ids, model_name=''):
+def create_dataframe_head(argument_ids, model_name):
     """
         Creates `DataFrame` usable to append predictions to it
 
@@ -23,8 +23,8 @@ def create_dataframe_head(argument_ids, model_name=''):
         ----------
         argument_ids : list[str]
             First column of the resulting DataFrame
-        model_name : str, optional
-            Optional second column of DataFrame will contain the given model name
+        model_name : str
+            Second column of DataFrame will contain the given model name
 
         Returns
         -------
@@ -32,8 +32,6 @@ def create_dataframe_head(argument_ids, model_name=''):
             prepared DataFrame
     """
     df_model_head = pd.DataFrame(argument_ids, columns=['Argument ID'])
-
-    if model_name != '':
-        df_model_head['Method'] = [model_name] * len(argument_ids)
+    df_model_head['Method'] = [model_name] * len(argument_ids)
 
     return df_model_head

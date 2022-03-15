@@ -13,7 +13,7 @@
         Combines the two DataFrames
     split_arguments(df_arguments):
         Splits `DataFrame` by column `Usage` into `train`-, `validation`-, and `test`-arguments
-    create_dataframe_head(argument_ids, model_name=''):
+    create_dataframe_head(argument_ids, model_name):
         Creates `DataFrame` usable to append predictions to it
     write_tsv_dataframe(filepath, dataframe):
         Stores `DataFrame` in given tsv file

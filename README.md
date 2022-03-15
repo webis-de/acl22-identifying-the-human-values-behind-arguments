@@ -40,8 +40,8 @@ on the made predictions you need an additional installation of
 #### CUDA requirements
 
 If you have a CUDA-compatible NVIDIA graphics card, you can use a CUDA-enabled
-version of the PyTorch image to enable hardware acceleration. This was only
-tested under T.B.A.
+version of the PyTorch image to enable hardware acceleration.
+<!-- This was only tested under ... -->
 
 Firstly, ensure that you install the appropriate NVIDIA drivers. You should use
 an installed version of CUDA _at least as new as the image you intend to use_
@@ -57,13 +57,13 @@ access within Docker containers. This can be found at
 In the main directory create the image by running:
 
 ```bash
-$ docker build -f Dockerfiles/Dockerfile_nocuda -t acl22_values:no_cuda .
+$ docker build -f Dockerfiles/Dockerfile_nocuda -t ghcr.io/webis-de/acl22-value-classification:nocuda .
 ```
 
 If you want to use the cuda-enabled version instead run:
 
 ```bash
-$ docker build -f Dockerfiles/Dockerfile_cuda11_3 -t acl22_values:cuda11.3 .
+$ docker build -f Dockerfiles/Dockerfile_cuda11_3 -t ghcr.io/webis-de/acl22-value-classification:cuda11.3 .
 ```
 
 ### Train the models in the Docker container
@@ -93,12 +93,12 @@ IMAGE_NAME python training.py [OPTIONS]
   at https://github.com/NVIDIA/nvidia-docker).
 * `--volume="$PWD:/app"`: Mounts the current working directory into the container.
   The default working directory inside the container is `/app`.
-* `IMAGE_NAME` is the name of your Docker image (either `acl22_values:no_cuda` or `acl22_values:cuda11.3`)
+* `IMAGE_NAME` is the name of your Docker image
 * `OPTIONS` are:
-  * `-a, --argument-dir string` specifies the folder containing the argument files (default is `./data/`)
+  * `-c, --classifier string` specifies the classifiers to train: `b` for Bert, `s` for SVM (default is `b`)
+  * `-d, --data-dir string` specifies the folder containing the argument files (default is `./data/`)
   * `-h, --help` displays the help text
-  * `-m, --model-dir string` specifies the folder containing the trained models (default is `./data/models`)
-  * `-s, --svm` requests the prediction from trained SVM
+  * `-m, --model-dir string` specifies the folder for storing the trained models (default is `./data/models`)
   * `-v, --validate` validate models after training
 
 Example command:
@@ -106,7 +106,7 @@ Example command:
 ```sh
 sudo docker run --rm -it --init \
 --volume="$PWD:/app" \
-acl22_values:no_cuda python training.py -a "./custom_dir/corpus" -s -v
+ghcr.io/webis-de/acl22-value-classification:nocuda python training.py -d "./custom_dir/corpus" -c "bs" -v
 ```
 
 ### Run the prediction script inside the Docker container
@@ -135,13 +135,12 @@ IMAGE_NAME python predict.py [OPTIONS]
   at https://github.com/NVIDIA/nvidia-docker).
 * `--volume="$PWD:/app"`: Mounts the current working directory into the container.
   The default working directory inside the container is `/app`.
-* `IMAGE_NAME` is the name of your Docker image (either `acl22_values:no_cuda` or `acl22_values:cuda11.3`)
+* `IMAGE_NAME` is the name of your Docker image
 * `OPTIONS` are:
-  * `-a, --argument-dir string` specifies the folder containing the argument files (default is `./data/`)
+  * `-c, --classifier string` specifies the used classifiers: `b` for Bert, `s` for SVM, `o` for 1-Baseline (default is `b`)
+  * `-d, --data-dir string` specifies the folder containing the argument files (default is `./data/`)
   * `-h, --help` displays the help text
   * `-m, --model-dir string` specifies the folder containing the trained models (default is `./data/models`)
-  * `-o, --one-baseline` requests the prediction from 1-Baseline
-  * `-s, --svm` requests the prediction from trained SVM
 
 | :warning: | The Support Vector Machines are loaded and saved using &#8220;pickle&#8221; to de-/serialize the data object from/to:<br/><code>[MODEL_DIR]/svm/svm_train_level[X].sav</code><br/> The files are only checked to contain &#8220;sklearn Pipelines&#8221;.<br/><br/>Only use serialized files from trustworthy sources. |
 | :---: | :--- |
@@ -151,7 +150,7 @@ Example command:
 ```sh
 sudo docker run --rm -it --init \
 --volume="$PWD:/app" \
-acl22_values:no_cuda python predict.py -a "./custom_dir/corpus" -s
+ghcr.io/webis-de/acl22-value-classification:nocuda python predict.py -d "./custom_dir/corpus" -c "bso"
 ```
 
 ### Evaluate the predictions
@@ -170,6 +169,6 @@ $ Rscript Evaluation.R [OPTIONS]
 ```
 
 * `OPTIONS` are:
-  * `-a, --argument-dir string` specifies the folder containing the prediction and argument files (default is `./data/`)
-  * `--absent-labels` to include the absent labels on each dataset part into the evaluation
+  * `-a, --absent-labels` to include the absent labels on each dataset part into the evaluation
+  * `-d, --data-dir string` specifies the folder containing the prediction and argument files (default is `./data/`)
   * `-h, --help` displays the help text

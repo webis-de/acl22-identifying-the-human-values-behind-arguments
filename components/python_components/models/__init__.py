@@ -6,9 +6,9 @@
 
     Functions
     ---------
-    train_bert_model(train_dataframe, model_dir, test_dataframe=None, num_train_epochs=20):
+    train_bert_model(train_dataframe, model_dir, labels, test_dataframe=None, num_train_epochs=20):
         Train Bert model
-    predict_bert_model(dataframe, model_dir, num_labels):
+    predict_bert_model(dataframe, model_dir, labels):
         Predict with Bert model
     train_svm(train_dataframe, labels, model_file, test_dataframe=None):
         Train Support Vector Machines (SVMs)

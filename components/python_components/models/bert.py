@@ -71,16 +71,18 @@ def tokenize_and_encode(examples):
     return tokenizer(examples['Premise'], truncation=True)
 
 
-def convert_to_dataset(train_dataframe, test_dataframe):
+def convert_to_dataset(train_dataframe, test_dataframe, labels):
     """
         Converts pandas DataFrames into a DatasetDict
 
         Parameters
         ----------
-        train_dataframe : DataFrame
+        train_dataframe : pd.DataFrame
             Arguments to be listed as "train"
-        test_dataframe : DataFrame
+        test_dataframe : pd.DataFrame
             Arguments to be listed as "test"
+        labels : list[str]
+            The labels in both DataFrames
 
         Returns
         -------
@@ -88,14 +90,14 @@ def convert_to_dataset(train_dataframe, test_dataframe):
             a `DatasetDict` with attributes "train" and "test" for the listed arguments,
             a `list` with the contained labels
         """
-    train_dataset = Dataset.from_dict(train_dataframe.to_dict('list'))
-    test_dataset = Dataset.from_dict(test_dataframe.to_dict('list'))
+    column_intersect = [x for x in (['Premise'] + labels) if x in train_dataframe.columns.values]
+
+    train_dataset = Dataset.from_dict((train_dataframe[column_intersect]).to_dict('list'))
+    test_dataset = Dataset.from_dict((test_dataframe[column_intersect]).to_dict('list'))
 
     ds = DatasetDict()
     ds['train'] = train_dataset
     ds['test'] = test_dataset
-
-    ds = ds.remove_columns(['Argument ID', 'Conclusion', 'Stance', 'Part'])
 
     ds = ds.map(lambda x: {"labels": [int(x[c]) for c in ds['train'].column_names if
                                       c not in ['Argument ID', 'Conclusion', 'Stance', 'Premise', 'Part']]})
@@ -121,7 +123,7 @@ def load_model_from_data_dir(model_dir, num_labels):
     return model
 
 
-def predict_bert_model(dataframe, model_dir, num_labels):
+def predict_bert_model(dataframe, model_dir, labels):
     """
         Classifies each argument using the Bert model stored in `model_dir`
 
@@ -131,15 +133,16 @@ def predict_bert_model(dataframe, model_dir, num_labels):
             The arguments to be classified
         model_dir: str
             The directory of the pre-trained Bert model to use
-        num_labels: int
-            The number of labels to predict
+        labels: list[str]
+            The labels to predict
 
         Returns
         -------
         np.ndarray
             numpy nd-array with the predictions given by the model
         """
-    ds, no_labels = convert_to_dataset(dataframe, dataframe)
+    ds, no_labels = convert_to_dataset(dataframe, dataframe, labels)
+    num_labels = len(labels)
     ds = ds.remove_columns(['labels'])
 
     batch_size = 8
@@ -164,7 +167,7 @@ def predict_bert_model(dataframe, model_dir, num_labels):
     return prediction
 
 
-def train_bert_model(train_dataframe, model_dir, test_dataframe=None, num_train_epochs=20):
+def train_bert_model(train_dataframe, model_dir, labels, test_dataframe=None, num_train_epochs=20):
     """
         Trains Bert model with the arguments in `train_dataframe`
 
@@ -174,6 +177,8 @@ def train_bert_model(train_dataframe, model_dir, test_dataframe=None, num_train_
             The arguments to be trained on
         model_dir: str
             The directory for storing the trained model
+        labels : list[str]
+            The labels in the training data
         test_dataframe: pd.DataFrame, optional
             The validation arguments (default is None)
         num_train_epochs: int, optional
@@ -188,7 +193,7 @@ def train_bert_model(train_dataframe, model_dir, test_dataframe=None, num_train_
         """
     if test_dataframe is None:
         test_dataframe = train_dataframe
-    ds, labels = convert_to_dataset(train_dataframe, test_dataframe)
+    ds, labels = convert_to_dataset(train_dataframe, test_dataframe, labels)
 
     batch_size = 8
 

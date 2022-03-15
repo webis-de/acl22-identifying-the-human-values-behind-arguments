@@ -138,11 +138,12 @@ def main(argv):
         if validate:
             bert_model_evaluation = train_bert_model(df_train_all[i],
                                                      os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
-                                                     test_dataframe=df_valid_all[i])
+                                                     value_json[levels[i]], test_dataframe=df_valid_all[i])
             print("F1-Scores for Level %s:" % levels[i])
             print(bert_model_evaluation['eval_f1-score'])
         else:
-            train_bert_model(df_train_all[i], os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])))
+            train_bert_model(df_train_all[i], os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
+                             value_json[levels[i]])
 
     if run_svm:
         for i in range(num_levels):

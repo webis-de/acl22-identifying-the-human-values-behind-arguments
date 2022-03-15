@@ -112,7 +112,7 @@ def main(argv):
     for i in range(num_levels):
         print("===> Bert: Predicting Level %s..." % levels[i])
         result = predict_bert_model(df_test, os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
-                                    len(value_json[levels[i]]))
+                                    value_json[levels[i]])
         df_prediction = pd.concat([df_prediction, pd.DataFrame(result, columns=value_json[levels[i]])], axis=1)
 
     # predict with SVM

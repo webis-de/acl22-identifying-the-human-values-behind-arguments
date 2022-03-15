@@ -66,7 +66,7 @@ source('components/r_components/Metrics.R')
 
 `%notin%` <- Negate(`%in%`)
 
-cat('===> Loading files...')
+cat('===> Loading files...\n')
 
 data.arguments = read.csv(arguments_filepath, sep = '\t')
 data.predictions = read.csv(prediction_filepath, sep = '\t')
@@ -97,14 +97,14 @@ for (i in 1:length(levels)) {
     }
   }
   else {
-    cat(paste('No file for level ', levels[i], ' found.', sep = ''))
+    cat(paste('No file for level ', levels[i], ' found.\n', sep = ''))
   }
 }
 
 levels <- actual.levels
 
 if (length(levels) == 0) {
-  cat("For all levels the required files were either absent or don't apply on the predictions. No evaluation can be made.")
+  cat("For all levels the required files were either absent or don't apply on the predictions. No evaluation can be made.\n")
   exit()
 }
 
@@ -158,7 +158,7 @@ if (!absent_labels) {
 
 ##### Execute evaluation #####
 
-cat('===> Evaluating predictions...')
+cat('===> Evaluating predictions...\n')
 
 data.evaluation <- NULL
 
@@ -226,7 +226,7 @@ if (has.methods) {
 
 ##### Output final evaluation #####
 evaluation_filepath = file.path(dir, 'evaluation.tsv')
-cat(paste('===> Writing evaluation to: ', evaluation_filepath, sep = ''))
+cat(paste('===> Writing evaluation to: ', evaluation_filepath, '\n', sep = ''))
 write.table(data.evaluation, evaluation_filepath, sep = '\t', row.names = F, quote = F, col.names = T)
 
 ###################################

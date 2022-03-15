@@ -76,7 +76,7 @@ In order to train the models you need the following files in your
   * `Premise`
   * `Usage` being "train" for each training argument (and "validation" for each validation argument)
 * `value.json`
-* `label-levels[X].tsv` for each level `X` used in `value.json`
+* `labels-level[X].tsv` for each level `X` used in `value.json`
 
 After that you can run the training script:
 
@@ -156,7 +156,7 @@ acl22_values:no_cuda python predict.py -a "./custom_dir/corpus" -s
 
 ### Evaluate the predictions
 
-To evaluate the predictions made by the models your `arguments.tsv` and your `label-levels[X].tsv` with the
+To evaluate the predictions made by the models your `arguments.tsv` and your `labels-level[X].tsv` with the
 corresponding true labels
 [prediction step](#run-the-prediction-script-inside-the-docker-container)
 as well as the resulting `predictions.tsv` need to be in your

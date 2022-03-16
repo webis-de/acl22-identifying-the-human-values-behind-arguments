@@ -5,11 +5,12 @@ Machine Learning scripts for the identification of human values behind arguments
 [![license](https://img.shields.io/github/license/webis-de/acl22-identifying-the-human-values-behind-arguments)](https://github.com/webis-de/acl22-identifying-the-human-values-behind-arguments/blob/main/LICENSE)
 
 As a first approach on the automatic identification of human values behind arguments the scripts can be used to train
-different machine learning models based on a
-Multi-Level Value-Taxonomy
-and classify new arguments in regards of the human values they concern.
+different machine learning models based on a Multi-Level Value-Taxonomy and classify new arguments in regards of the
+human values they concern.
 
 The available machine learning models are currently Bert and two baseline models (SVM and 1-Baseline).
+
+The scripts are accompanying the paper "[Identifying the Human Values behind Arguments](https://webis.de/publications.html#kiesel_2022b)", published at ACL'22.
 
 ## Data Directory
 

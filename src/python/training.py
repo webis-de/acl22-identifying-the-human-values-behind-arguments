@@ -2,9 +2,9 @@ import sys
 import getopt
 import os
 
-from components.python_components.setup import (load_json_file, load_arguments_from_tsv, load_labels_from_tsv,
+from components.setup import (load_values_from_json, load_arguments_from_tsv, load_labels_from_tsv,
                                                 combine_columns, split_arguments)
-from components.python_components.models import (train_bert_model, train_svm)
+from components.models import (train_bert_model, train_svm)
 
 help_string = '\nUsage:  training.py [OPTIONS]' \
               '\n' \
@@ -13,25 +13,26 @@ help_string = '\nUsage:  training.py [OPTIONS]' \
               '\nOptions:' \
               '\n  -c, --classifier string  Select classifier: "b" for Bert, "s" for SVM, "bs" for both (default' \
               '\n                           "b")' \
-              '\n  -d, --data-dir string    Directory with the argument files (default' \
-              '\n                           WORKING_DIR/data/)' \
+              '\n  -d, --data-dir string    Directory with the argument files (default "/data/")' \
               '\n  -h, --help               Display help text' \
-              '\n  -m, --model-dir string   Directory for saving the trained models (default' \
-              '\n                           WORKING_DIR/data/models/)' \
+              '\n  -l, --levels string      Comma-separated list of taxonomy levels to train models for (default' \
+              '\n                           "1,2,3,4a,4b")' \
+              '\n  -m, --model-dir string   Directory for saving the trained models (default "/models/")' \
               '\n  -v, --validate           Request evaluation after training'
 
 
 def main(argv):
     # default values
     curr_dir = os.getcwd()
-    model_dir = os.path.join(curr_dir, 'data/models/')
     run_bert = True
     run_svm = False
-    argument_dir = os.path.join(curr_dir, 'data/')
+    data_dir = '/data/'
+    levels = ["1", "2", "3", "4a", "4b"]
+    model_dir = '/models/')
     validate = False
 
     try:
-        opts, args = getopt.gnu_getopt(argv, "c:d:hm:v", ["classifier=", "data-dir=", "help", "model-dir=", "validate"])
+        opts, args = getopt.gnu_getopt(argv, "c:d:hl:m:v", ["classifier=", "data-dir=", "help", "levels=", "model-dir=", "validate"])
     except getopt.GetoptError:
         print(help_string)
         sys.exit(2)
@@ -46,7 +47,9 @@ def main(argv):
                 print('No classifiers selected')
                 sys.exit(2)
         elif opt in ('-d', '--data-dir'):
-            argument_dir = arg
+            data_dir = arg
+        elif opt in ('-l', '--levels'):
+            levels = arg.split(",")
         elif opt in ('-m', '--model-dir'):
             model_dir = arg
         elif opt in ('-v', '--validate'):
@@ -54,9 +57,9 @@ def main(argv):
 
     svm_dir = os.path.join(model_dir, 'svm')
 
-    # Check argument directory
-    if not os.path.isdir(argument_dir):
-        print('The specified data directory "%s" does not exist' % argument_dir)
+    # Check data directory
+    if not os.path.isdir(data_dir):
+        print('The specified data directory "%s" does not exist' % data_dir)
         sys.exit(2)
 
     # Check model directory
@@ -77,14 +80,14 @@ def main(argv):
         else:
             os.mkdir(svm_dir)
 
-    argument_filepath = os.path.join(argument_dir, 'arguments.tsv')
-    value_json_filepath = os.path.join(argument_dir, 'values.json')
+    argument_filepath = os.path.join(data_dir, 'arguments.tsv')
+    value_json_filepath = os.path.join(data_dir, 'values.json')
 
     if not os.path.isfile(argument_filepath):
-        print('The required file "arguments.tsv" is not present in the argument directory')
+        print('The required file "arguments.tsv" is not present in the data directory')
         sys.exit(2)
     if not os.path.isfile(value_json_filepath):
-        print('The required file "values.json" is not present in the argument directory')
+        print('The required file "values.json" is not present in the data directory')
         sys.exit(2)
 
     # load arguments
@@ -93,18 +96,12 @@ def main(argv):
         print('There are no arguments in file "%s"' % argument_filepath)
         sys.exit(2)
 
-    value_json = load_json_file(value_json_filepath)
-
-    try:
-        levels = value_json['level']
-    except KeyError:
-        print('Missing attribute "level" in value.json')
-        sys.exit(2)
+    values = load_values_from_json(value_json_filepath)
     num_levels = len(levels)
 
     # check levels
     for i in range(num_levels):
-        if levels[i] not in value_json:
+        if levels[i] not in values:
             print('Missing attribute "{}" in value.json'.format(levels[i]))
             sys.exit(2)
 
@@ -112,12 +109,12 @@ def main(argv):
     df_train_all = []
     df_valid_all = []
     for i in range(num_levels):
-        label_filepath = os.path.join(argument_dir, 'labels-level{}.tsv'.format(levels[i]))
+        label_filepath = os.path.join(data_dir, 'labels-level{}.tsv'.format(levels[i]))
         if not os.path.isfile(label_filepath):
-            print('The required file "labels-level{}.tsv" is not present in the argument directory'.format(levels[i]))
+            print('The required file "labels-level{}.tsv" is not present in the data directory'.format(levels[i]))
             sys.exit(2)
         # read labels from .tsv file
-        df_labels = load_labels_from_tsv(label_filepath, value_json[levels[i]])
+        df_labels = load_labels_from_tsv(label_filepath, values[levels[i]])
         # join arguments and labels
         df_full_level = combine_columns(df_arguments, df_labels)
         # split dataframe by usage
@@ -140,24 +137,24 @@ def main(argv):
             if validate:
                 bert_model_evaluation = train_bert_model(df_train_all[i],
                                                          os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
-                                                         value_json[levels[i]], test_dataframe=df_valid_all[i])
+                                                         values[levels[i]], test_dataframe=df_valid_all[i])
                 print("F1-Scores for Level %s:" % levels[i])
                 print(bert_model_evaluation['eval_f1-score'])
             else:
                 train_bert_model(df_train_all[i], os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
-                                 value_json[levels[i]])
+                                 values[levels[i]])
 
     if run_svm:
         for i in range(num_levels):
             print("===> SVM: Training Level %s..." % levels[i])
             if validate:
-                svm_f1_scores = train_svm(df_train_all[i], value_json[levels[i]],
+                svm_f1_scores = train_svm(df_train_all[i], values[levels[i]],
                                           os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i])),
                                           test_dataframe=df_valid_all[i])
                 print("F1-Scores for Level %s:" % levels[i])
                 print(svm_f1_scores)
             else:
-                train_svm(df_train_all[i], value_json[levels[i]],
+                train_svm(df_train_all[i], values[levels[i]],
                           os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i])))
 
 

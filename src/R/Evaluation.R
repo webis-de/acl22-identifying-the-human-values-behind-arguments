@@ -3,6 +3,8 @@ library(rlang)
 ##### User Interface #####
 
 args <- commandArgs(trailingOnly=TRUE)
+rscript.options <- commandArgs(trailingOnly = FALSE)
+source.dir <- dirname(sub(".*=", "", rscript.options[grep("--file=", rscript.options)]))
 
 help_text <- paste(
   '\nUsage:  Evaluation.R [OPTIONS]',
@@ -11,41 +13,48 @@ help_text <- paste(
   'The scores are calculated for each model every label individually with the mean score for each level.',
   '',
   'Options:',
-  '  -a, --absent-labels    Include absent labels from the test dataset into validation',
-  '  -d, --data-dir string  Directory with the prediction and argument files (default',
-  '                         WORKING_DIR/data/)',
-  '  -h, --help             Display help text',
+  '  -a, --absent-labels       Include absent labels from the test dataset into validation',
+  '  -d, --data-dir string     Directory with the prediction and argument files (default',
+  '                            WORKING_DIR/webis-argvalues-22/)',
+  '  -h, --help                Display help text',
+  '  -p, --predictions string  Predictions file with predictions to evaluate (default',
+  '                            WORKING_DIR/predictions.tsv)',
   sep = '\n'
   )
 exit <- function() { invokeRestart("abort") }
 
 # default values
-dir <- file.path('./data/')
+data_dir <- file.path('./webis-argvalues-22/')
+prediction_filepath <- file.path('./predictions.tsv')
 absent_labels <- FALSE
 
 i <- 1
 while (i <= length(args)) {
   arg <- args[i]
-  if (arg == "-h" || startsWith("--help", arg)) {
-    cat(help_text)
-    exit()
+  if (arg == "-a" || startsWith("--absent-labels", arg)) {
+    absent_labels <- TRUE
   } else if (arg == "-d" || startsWith("--data-dir", arg)) {
     if (i == length(args)) {
       stop("No data directory specified", call. = FALSE)
     }
     dir <- file.path(args[i + 1])
     i <- i + 1
-  } else if (arg == "-a" || startsWith("--absent-labels", arg)) {
-    absent_labels <- TRUE
+  } else if (arg == "-h" || startsWith("--help", arg)) {
+    cat(help_text)
+    exit()
+  } else if (arg == "-p" || startsWith("--predictions", arg)) {
+    if (i == length(args)) {
+      stop("No predictions file specified", call. = FALSE)
+    }
+    prediction_filepath <- file.path(args[i + 1])
+    i <- i + 1
   } else {
     stop(help_text, call. = FALSE)
   }
   i <- i + 1
 }
 
-prediction_filepath <- file.path(dir, 'predictions.tsv')
-arguments_filepath <- file.path(dir, 'arguments.tsv')
-
+arguments_filepath <- file.path(data_dir, 'arguments.tsv')
 if (!file.exists(prediction_filepath)) {
   stop("The specified prediction file does not exist.", call. = FALSE)
 }
@@ -57,7 +66,7 @@ levels <- c("1", "2", "3", "4a", "4b")
 
 ##### Load components #####
 
-source('components/r_components/Metrics.R')
+source(paste(source.dir, 'components/Metrics.R', sep="/"))
 
 ###########################
 
@@ -68,8 +77,8 @@ source('components/r_components/Metrics.R')
 
 cat('===> Loading files...\n')
 
-data.arguments <- read.csv(arguments_filepath, sep = '\t')
-data.predictions <- read.csv(prediction_filepath, sep = '\t')
+data.arguments <- read.csv(arguments_filepath, sep = '\t', stringsAsFactors = FALSE)
+data.predictions <- read.csv(prediction_filepath, sep = '\t', stringsAsFactors = FALSE)
 
 data.arguments.filtered <- data.arguments[data.arguments$Argument.ID %in% data.predictions$Argument.ID,]
 if ('Usage' %in% colnames(data.arguments)) {
@@ -86,9 +95,9 @@ actual.levels <- c()
 
 data.labels.all <- list()
 for (i in 1:length(levels)) {
-  label.file.path <- file.path(dir, paste('labels-level', levels[i], '.tsv', sep = ''))
+  label.file.path <- file.path(data_dir, paste('labels-level', levels[i], '.tsv', sep = ''))
   if (file.exists(label.file.path)) {
-    read_labels <- read.csv(label.file.path, sep = '\t')
+    read_labels <- read.csv(label.file.path, sep = '\t', stringsAsFactors = FALSE)
     read_labels <- read_labels[read_labels$Argument.ID %in% data.arguments.filtered$Argument.ID,]
     read_labels <- read_labels[,names(read_labels) %in% names(data.predictions)]
     if (length(names(read_labels)) > 1) {
@@ -112,7 +121,7 @@ if ('Part' %in% colnames(data.arguments)) {
   datasetNames <- unique(data.arguments.filtered$Part)
   
   data.predictions$dataset <- sapply(data.predictions$Argument.ID, function(x) {
-    c(data.arguments.filtered[data.arguments.filtered$Argument.ID == x,"Part"])
+      c(data.arguments.filtered[data.arguments.filtered$Argument.ID == x,"Part"])
     })
 } else {
   datasetNames <- c("none")
@@ -185,17 +194,33 @@ for (i in 1:length(levels)) {
 ##### Visual formatting #####
 
 ## Special cases
-data.evaluation$Label[data.evaluation$Label == "Be.self.disciplined"] <- "Be self-disciplined"
-data.evaluation$Label[data.evaluation$Label == "Self.direction.."] <- "Self-direction: "
-data.evaluation$Label[data.evaluation$Label == "Power.."] <- "Power: "
-data.evaluation$Label[data.evaluation$Label == "Security.."] <- "Security: "
-data.evaluation$Label[data.evaluation$Label == "Conformity.."] <- "Conformity: "
-data.evaluation$Label[data.evaluation$Label == "Benevolence.."] <- "Benevolence: "
-data.evaluation$Label[data.evaluation$Label == "Universalism.."] <- "Universalism: "
-data.evaluation$Label[data.evaluation$Label == "Self.enhancement"] <- "Self-enhancement"
-data.evaluation$Label[data.evaluation$Label == "Self.transcendence"] <- "Self-transcendence"
-data.evaluation$Label[data.evaluation$Label == "Growth..Anxiety.free"] <- "Growth, Anxiety-free"
-data.evaluation$Label[data.evaluation$Label == "Self.protection..Anxiety.avoidance"] <- "Self-protection, Anxiety avoidance"
+if (is.element("1", actual.levels)) {
+  data.evaluation$Label[data.evaluation$Label == "Be.self.disciplined"] <- "Be self-disciplined"
+}
+if (is.element("2", actual.levels)) {
+  data.evaluation$Label[data.evaluation$Label == "Self.direction..thought"] <- "Self-direction: thought"
+  data.evaluation$Label[data.evaluation$Label == "Self.direction..action"] <- "Self-direction: action"
+  data.evaluation$Label[data.evaluation$Label == "Power..dominance"] <- "Power: dominance"
+  data.evaluation$Label[data.evaluation$Label == "Power..resources"] <- "Power: resources"
+  data.evaluation$Label[data.evaluation$Label == "Security..personal"] <- "Security: personal"
+  data.evaluation$Label[data.evaluation$Label == "Security..societal"] <- "Security: societal"
+  data.evaluation$Label[data.evaluation$Label == "Conformity..rules"] <- "Conformity: rules"
+  data.evaluation$Label[data.evaluation$Label == "Conformity..interpersonal"] <- "Conformity: interpersonal"
+  data.evaluation$Label[data.evaluation$Label == "Benevolence..caring"] <- "Benevolence: caring"
+  data.evaluation$Label[data.evaluation$Label == "Benevolence..dependability"] <- "Benevolence: dependability"
+  data.evaluation$Label[data.evaluation$Label == "Universalism..concern"] <- "Universalism: concern"
+  data.evaluation$Label[data.evaluation$Label == "Universalism..nature"] <- "Universalism: nature"
+  data.evaluation$Label[data.evaluation$Label == "Universalism..tolerance"] <- "Universalism: tolerance"
+  data.evaluation$Label[data.evaluation$Label == "Universalism..objectivity"] <- "Universalism: objectivity"
+}
+if (is.element("3", actual.levels)) {
+  data.evaluation$Label[data.evaluation$Label == "Self.enhancement"] <- "Self-enhancement"
+  data.evaluation$Label[data.evaluation$Label == "Self.transcendence"] <- "Self-transcendence"
+}
+if (is.element("4b", actual.levels)) {
+  data.evaluation$Label[data.evaluation$Label == "Growth..Anxiety.free"] <- "Growth, Anxiety-free"
+  data.evaluation$Label[data.evaluation$Label == "Self.protection..Anxiety.avoidance"] <- "Self-protection, Anxiety avoidance"
+}
 
 ## Revert spaces
 data.evaluation$Label <- sapply(data.evaluation$Label, function(x) gsub('\\.', ' ', x))
@@ -225,8 +250,6 @@ if (has.methods) {
 
 
 ##### Output final evaluation #####
-evaluation_filepath <- file.path(dir, 'evaluation.tsv')
-cat(paste('===> Writing evaluation to: ', evaluation_filepath, '\n', sep = ''))
-write.table(data.evaluation, evaluation_filepath, sep = '\t', row.names = F, quote = F, col.names = T)
+write.table(data.evaluation, stdout(), sep = '\t', row.names = F, quote = F, col.names = T)
 
 ###################################

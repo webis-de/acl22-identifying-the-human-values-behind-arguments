@@ -1,8 +1,10 @@
 """
-    Collection of functions to read, format, and write pandas `DataFrames`
+    Collection of functions to read, format, and write
 
     Functions
     ---------
+    load_values_from_json(filepath):
+        Load values per level
     load_json_file(filepath):
         Load content of json-file
     load_arguments_from_tsv(filepath):
@@ -23,6 +25,6 @@
     MissingColumnError:
         Error indicating that an imported DataFrame lacks necessary columns
     """
-from .import_dataset import (load_json_file, load_arguments_from_tsv, load_labels_from_tsv, MissingColumnError)
+from .import_dataset import (load_values_from_json, load_json_file, load_arguments_from_tsv, load_labels_from_tsv, MissingColumnError)
 from .format_dataset import (combine_columns, split_arguments, create_dataframe_head)
 from .export_dataset import (write_tsv_dataframe)

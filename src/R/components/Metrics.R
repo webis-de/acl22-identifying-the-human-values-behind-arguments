@@ -76,7 +76,7 @@ evaluate <- function(dataPred, dataEval, modelName, setName, levelNumber) {
   
   Label <- c(order, "Mean")
   
-  output <- data.frame(Label)
+  output <- data.frame(Label, stringsAsFactors = FALSE)
   output$Precision <- c(unlist(ma_prec_list), ma_prec)
   output$Recall <- c(unlist(ma_rec_list), ma_rec)
   output$F1 <- c(unlist(ma_f1_list), ma_f1)

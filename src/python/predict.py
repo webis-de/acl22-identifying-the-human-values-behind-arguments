@@ -3,9 +3,9 @@ import getopt
 import os
 import pandas as pd
 
-from components.python_components.setup import (load_json_file, load_arguments_from_tsv, split_arguments,
+from components.setup import (load_values_from_json, load_arguments_from_tsv, split_arguments,
                                                 write_tsv_dataframe, create_dataframe_head)
-from components.python_components.models import (predict_bert_model, predict_one_baseline, predict_svm, PickleError)
+from components.models import (predict_bert_model, predict_one_baseline, predict_svm, PickleError)
 
 help_string = '\nUsage:  predict.py [OPTIONS]' \
               '\n' \
@@ -14,24 +14,27 @@ help_string = '\nUsage:  predict.py [OPTIONS]' \
               '\nOptions:' \
               '\n  -c, --classifier string  Select classifier: "b" for Bert, "s" for SVM, "o" for 1-Baseline,' \
               '\n                           or combination like "so" (default "b")' \
-              '\n  -d, --data-dir string    Directory with the argument files (default' \
-              '\n                           WORKING_DIR/data/)' \
+              '\n  -d, --data-dir string    Directory with the argument files (default "/data/")' \
               '\n  -h, --help               Display help text' \
-              '\n  -m, --model-dir string   Directory of the trained models (default' \
-              '\n                           WORKING_DIR/data/models/)'
+              '\n  -l, --levels string      Comma-separated list of taxonomy levels to train models for (default' \
+              '\n                           "1,2,3,4a,4b")' \
+              '\n  -m, --model-dir string   Directory for saving the trained models (default "/models/")' \
+              '\n  -o, --output-dir string  Directory to write the "predictions.tsv" into (default "/output/")'
 
 
 def main(argv):
     # default values
     curr_dir = os.getcwd()
-    model_dir = os.path.join(curr_dir, 'data/models/')
     run_bert = True
     run_svm = False
     run_one_baseline = False
-    argument_dir = os.path.join(curr_dir, 'data/')
+    data_dir = '/data/'
+    levels = ["1", "2", "3", "4a", "4b"]
+    model_dir = '/models/'
+    output_dir = '/output/'
 
     try:
-        opts, args = getopt.gnu_getopt(argv, "c:d:hm:", ["classifier=", "data-dir=", "help", "model-dir="])
+        opts, args = getopt.gnu_getopt(argv, "c:d:hl:m:o:", ["classifier=", "data-dir=", "help", "levels=", "model-dir=", "output-dir="])
     except getopt.GetoptError:
         print(help_string)
         sys.exit(2)
@@ -47,27 +50,27 @@ def main(argv):
                 print('No classifiers selected')
                 sys.exit(2)
         elif opt in ('-d', '--data-dir'):
-            argument_dir = arg
+            data_dir = arg
+        elif opt in ('-l', '--levels'):
+            levels = arg.split(",")
         elif opt in ('-m', '--model-dir'):
             model_dir = arg
-        elif opt in ('-o', '--one-baseline'):
-            run_one_baseline = True
-        elif opt in ('-s', '--svm'):
-            run_svm = True
+        elif opt in ('-o', '--output-dir'):
+            output_dir = arg
 
-    # Check argument directory
-    if not os.path.isdir(argument_dir):
-        print('The specified data directory "%s" does not exist' % argument_dir)
+    # Check data directory
+    if not os.path.isdir(data_dir):
+        print('The specified data directory "%s" does not exist' % data_dir)
         sys.exit(2)
 
-    argument_filepath = os.path.join(argument_dir, 'arguments.tsv')
-    value_json_filepath = os.path.join(argument_dir, 'values.json')
+    argument_filepath = os.path.join(data_dir, 'arguments.tsv')
+    values_filepath = os.path.join(data_dir, 'values.json')
 
     if not os.path.isfile(argument_filepath):
-        print('The required file "arguments.tsv" is not present in the argument directory')
+        print('The required file "arguments.tsv" is not present in the data directory')
         sys.exit(2)
-    if not os.path.isfile(value_json_filepath):
-        print('The required file "values.json" is not present in the argument directory')
+    if not os.path.isfile(values_filepath):
+        print('The required file "values.json" is not present in the data directory')
         sys.exit(2)
 
     # load arguments
@@ -76,18 +79,12 @@ def main(argv):
         print('There are no arguments in file "%s"' % argument_filepath)
         sys.exit(2)
 
-    value_json = load_json_file(value_json_filepath)
-
-    try:
-        levels = value_json['level']
-    except KeyError:
-        print('Missing attribute "level" in value.json')
-        sys.exit(2)
+    values = load_values_from_json(values_filepath)
     num_levels = len(levels)
 
     # check levels
     for i in range(num_levels):
-        if levels[i] not in value_json:
+        if levels[i] not in values:
             print('Missing attribute "{}" in value.json'.format(levels[i]))
             sys.exit(2)
 
@@ -97,7 +94,7 @@ def main(argv):
         sys.exit(2)
 
     for i in range(num_levels):
-        if not os.path.exists(os.path.join(model_dir, 'bert_train_level{}'.format(levels[i]))):
+        if run_bert and not os.path.exists(os.path.join(model_dir, 'bert_train_level{}'.format(levels[i]))):
             print('Missing saved Bert model for level "{}"'.format(levels[i]))
             sys.exit(2)
         if run_svm and not os.path.exists(os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i]))):
@@ -117,8 +114,8 @@ def main(argv):
         for i in range(num_levels):
             print("===> Bert: Predicting Level %s..." % levels[i])
             result = predict_bert_model(df_test, os.path.join(model_dir, 'bert_train_level{}'.format(levels[i])),
-                                        value_json[levels[i]])
-            df_bert = pd.concat([df_bert, pd.DataFrame(result, columns=value_json[levels[i]])], axis=1)
+                                        values[levels[i]])
+            df_bert = pd.concat([df_bert, pd.DataFrame(result, columns=values[levels[i]])], axis=1)
         df_prediction = df_bert
 
     # predict with SVM
@@ -127,7 +124,7 @@ def main(argv):
             df_svm = create_dataframe_head(df_test['Argument ID'], model_name='SVM')
             for i in range(num_levels):
                 print("===> SVM: Predicting Level %s..." % levels[i])
-                result = predict_svm(df_test, value_json[levels[i]],
+                result = predict_svm(df_test, values[levels[i]],
                                      os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i])))
                 df_svm = pd.concat([df_svm, result], axis=1)
 
@@ -143,7 +140,7 @@ def main(argv):
         df_one_baseline = create_dataframe_head(df_test['Argument ID'], model_name='1-Baseline')
         for i in range(num_levels):
             print("===> 1-Baseline: Predicting Level %s..." % levels[i])
-            result = predict_one_baseline(df_test, value_json[levels[i]])
+            result = predict_one_baseline(df_test, values[levels[i]])
             df_one_baseline = pd.concat([df_one_baseline, result], axis=1)
 
         if not run_bert and not run_svm:
@@ -153,7 +150,7 @@ def main(argv):
 
     # write predictions
     print("===> Writing predictions...")
-    write_tsv_dataframe(os.path.join(argument_dir, 'predictions.tsv'), df_prediction)
+    write_tsv_dataframe(os.path.join(output_dir, 'predictions.tsv'), df_prediction)
 
 
 if __name__ == '__main__':

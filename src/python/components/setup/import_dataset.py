@@ -35,7 +35,7 @@ def load_values_from_json(filepath):
     return values
 
 
-def load_arguments_from_tsv(filepath):
+def load_arguments_from_tsv(filepath, default_usage='test'):
     """
         Reads arguments from tsv file
 
@@ -43,6 +43,8 @@ def load_arguments_from_tsv(filepath):
         ----------
         filepath : str
             The path to the tsv file
+        default_usage : str, optional
+            The default value if the column "Usage" is missing
 
         Returns
         -------
@@ -61,7 +63,7 @@ def load_arguments_from_tsv(filepath):
         if not {'Argument ID', 'Premise'}.issubset(set(dataframe.columns.values)):
             raise MissingColumnError('The argument "%s" file does not contain the minimum required columns [Argument ID, Premise].' % filepath)
         if 'Usage' not in dataframe.columns.values:
-            dataframe['Usage'] = ['test'] * len(dataframe)
+            dataframe['Usage'] = [default_usage] * len(dataframe)
         return dataframe
     except IOError:
         traceback.print_exc()

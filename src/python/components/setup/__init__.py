@@ -7,7 +7,7 @@
         Load values per level
     load_json_file(filepath):
         Load content of json-file
-    load_arguments_from_tsv(filepath):
+    load_arguments_from_tsv(filepath, default_usage='test'):
         Reads arguments from tsv file
     load_labels_from_tsv(filepath, label_order):
         Reads label annotations from tsv file

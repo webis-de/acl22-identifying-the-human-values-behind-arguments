@@ -91,7 +91,7 @@ def main(argv):
         sys.exit(2)
 
     # load arguments
-    df_arguments = load_arguments_from_tsv(argument_filepath)
+    df_arguments = load_arguments_from_tsv(argument_filepath, default_usage='train')
     if len(df_arguments) < 1:
         print('There are no arguments in file "%s"' % argument_filepath)
         sys.exit(2)

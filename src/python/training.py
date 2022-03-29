@@ -28,7 +28,7 @@ def main(argv):
     run_svm = False
     data_dir = '/data/'
     levels = ["1", "2", "3", "4a", "4b"]
-    model_dir = '/models/')
+    model_dir = '/models/'
     validate = False
 
     try:

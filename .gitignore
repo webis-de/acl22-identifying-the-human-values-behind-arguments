@@ -17,7 +17,7 @@ __pycache__
 ######################
 # Project Specific
 ######################
-models
-webis-argvalues-22
-webis-argvalues-22.zip
-predictions.tsv
+/models
+/webis-argvalues-22
+/webis-argvalues-22.zip
+/predictions.tsv

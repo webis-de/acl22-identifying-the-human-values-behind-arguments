@@ -22,7 +22,6 @@ Download the models from TODO or [train them yourself](#train-classification-mod
 ## Predict
 Prediction on all arguments from `webis-argvalues-22/arguments.tsv` with `test` in the `Usage` column, or all arguments if no such column exists.
 ```bash
-mkdir models
 TAG=0.1.0-nocuda # or 'TAG=0.1.0-cuda11.3' if a GPU is available
 GPUS="" # or 'GPUS="--gpus=all"' to use all GPUs
 
@@ -39,7 +38,7 @@ docker run --rm -it --init $GPUS \
 ## Evaluate
 Calculate for each model the label-wise and mean _Precision_, _Recall_, _F1-Score_, and _Accuracy_.
 ```bash
-$ Rscript src/r/Evaluation.R --data-dir webis-argvalues-22/ --predictions predictions.tsv
+$ Rscript src/R/Evaluation.R --data-dir webis-argvalues-22/ --predictions predictions.tsv
 ```
 
 

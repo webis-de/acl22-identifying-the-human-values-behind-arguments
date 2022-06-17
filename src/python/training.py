@@ -149,13 +149,15 @@ def main(argv):
             print("===> SVM: Training Level %s..." % levels[i])
             if validate:
                 svm_f1_scores = train_svm(df_train_all[i], values[levels[i]],
-                                          os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i])),
+                                          os.path.join(model_dir, 'svm/svm_train_level{}_vectorizer.json'.format(levels[i])),
+                                          os.path.join(model_dir, 'svm/svm_train_level{}_models.json'.format(levels[i])),
                                           test_dataframe=df_valid_all[i])
                 print("F1-Scores for Level %s:" % levels[i])
                 print(svm_f1_scores)
             else:
                 train_svm(df_train_all[i], values[levels[i]],
-                          os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i])))
+                          os.path.join(model_dir, 'svm/svm_train_level{}_vectorizer.json'.format(levels[i])),
+                          os.path.join(model_dir, 'svm/svm_train_level{}_models.json'.format(levels[i])))
 
 
 if __name__ == '__main__':

@@ -4,8 +4,8 @@ import os
 import pandas as pd
 
 from components.setup import (load_values_from_json, load_arguments_from_tsv, split_arguments,
-                                                write_tsv_dataframe, create_dataframe_head)
-from components.models import (predict_bert_model, predict_one_baseline, predict_svm, PickleError)
+                              write_tsv_dataframe, create_dataframe_head)
+from components.models import (predict_bert_model, predict_one_baseline, predict_svm)
 
 help_string = '\nUsage:  predict.py [OPTIONS]' \
               '\n' \
@@ -34,7 +34,8 @@ def main(argv):
     output_dir = '/output/'
 
     try:
-        opts, args = getopt.gnu_getopt(argv, "c:d:hl:m:o:", ["classifier=", "data-dir=", "help", "levels=", "model-dir=", "output-dir="])
+        opts, args = getopt.gnu_getopt(argv, "c:d:hl:m:o:",
+                                       ["classifier=", "data-dir=", "help", "levels=", "model-dir=", "output-dir="])
     except getopt.GetoptError:
         print(help_string)
         sys.exit(2)
@@ -97,7 +98,9 @@ def main(argv):
         if run_bert and not os.path.exists(os.path.join(model_dir, 'bert_train_level{}'.format(levels[i]))):
             print('Missing saved Bert model for level "{}"'.format(levels[i]))
             sys.exit(2)
-        if run_svm and not os.path.exists(os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i]))):
+        if run_svm and (
+                not os.path.exists(os.path.join(model_dir, 'svm/svm_train_level{}_vectorizer.json'.format(levels[i])))
+                and not os.path.exists(os.path.join(model_dir, 'svm/svm_train_level{}_models.json'.format(levels[i])))):
             print('Missing saved SVM models for level "{}"'.format(levels[i]))
             sys.exit(2)
 
@@ -120,20 +123,18 @@ def main(argv):
 
     # predict with SVM
     if run_svm:
-        try:
-            df_svm = create_dataframe_head(df_test['Argument ID'], model_name='SVM')
-            for i in range(num_levels):
-                print("===> SVM: Predicting Level %s..." % levels[i])
-                result = predict_svm(df_test, values[levels[i]],
-                                     os.path.join(model_dir, 'svm/svm_train_level{}.sav'.format(levels[i])))
-                df_svm = pd.concat([df_svm, result], axis=1)
+        df_svm = create_dataframe_head(df_test['Argument ID'], model_name='SVM')
+        for i in range(num_levels):
+            print("===> SVM: Predicting Level %s..." % levels[i])
+            result = predict_svm(df_test, values[levels[i]],
+                                 os.path.join(model_dir, 'svm/svm_train_level{}_vectorizer.json'.format(levels[i])),
+                                 os.path.join(model_dir, 'svm/svm_train_level{}_models.json'.format(levels[i])))
+            df_svm = pd.concat([df_svm, result], axis=1)
 
-            if not run_bert:
-                df_prediction = df_svm
-            else:
-                df_prediction = pd.concat([df_prediction, df_svm])
-        except PickleError as error:
-            print(repr(error))
+        if not run_bert:
+            df_prediction = df_svm
+        else:
+            df_prediction = pd.concat([df_prediction, df_svm])
 
     # predict with 1-Baseline
     if run_one_baseline:

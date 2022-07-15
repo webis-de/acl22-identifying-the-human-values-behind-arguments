@@ -10,18 +10,13 @@
         Train Bert model
     predict_bert_model(dataframe, model_dir, labels):
         Predict with Bert model
-    train_svm(train_dataframe, labels, model_file, test_dataframe=None):
+    train_svm(train_dataframe, labels, vectorizer_file, model_file, test_dataframe=None):
         Train Support Vector Machines (SVMs)
-    predict_svm(dataframe, labels, model_file):
+    predict_svm(dataframe, labels, vectorizer_file, model_file):
         Predict with Support Vector Machines (SVMs)
     predict_one_baseline(dataframe, labels):
         Predict with 1-Baseline model
-
-    Exceptions
-    ----------
-    PickleError:
-        Error indicating that pickle retrieved unexpected code
     """
 from .bert import (train_bert_model, predict_bert_model)
-from .svm import (train_svm, predict_svm, PickleError)
+from .svm import (train_svm, predict_svm)
 from .one_baseline import (predict_one_baseline)

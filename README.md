@@ -12,13 +12,13 @@ Requirements:
 
 Download the dataset from [Zenodo](https://doi.org/10.5281/zenodo.5657250) and extract it in the main directory:
 ```bash
-$ wget https://zenodo.org/record/6381766/files/webis-argvalues-22.zip
+$ wget https://zenodo.org/record/6855004/files/webis-argvalues-22.zip
 $ unzip webis-argvalues-22.zip
 ```
 
 Download the models:
 ```bash
-$ wget https://zenodo.org/record/6401482/files/models.zip
+$ wget https://zenodo.org/record/6855004/files/models.zip
 $ unzip models.zip
 ```
 Or [train them yourself](#train-classification-models).
@@ -27,7 +27,7 @@ Or [train them yourself](#train-classification-models).
 ## Predict
 Prediction on all arguments from `webis-argvalues-22/arguments.tsv` with `test` in the `Usage` column, or all arguments if no such column exists.
 ```bash
-TAG=0.1.0-nocuda # or 'TAG=0.1.0-cuda11.3' if a GPU is available
+TAG=0.1.1-nocuda # or 'TAG=0.1.1-cuda11.3' if a GPU is available
 GPUS="" # or 'GPUS="--gpus=all"' to use all GPUs
 
 # Select classifiers with --classifier: "b" for BERT, "o" for one-baseline, and "s" for SVM
@@ -53,7 +53,7 @@ Note that the result does vary for BERT after re-training due to randomness in t
 Training on all arguments from `webis-argvalues-22/arguments.tsv` with `train` in the `Usage` column, or all arguments if no such column exists. 
 ```bash
 mkdir models
-TAG=0.1.0-nocuda # or 'TAG=0.1.0-cuda11.3' if a GPU is available
+TAG=0.1.1-nocuda # or 'TAG=0.1.1-cuda11.3' if a GPU is available
 GPUS="" # or 'GPUS="--gpus=all"' to use all GPUs
 
 # Select classifiers with --classifier: "b" for BERT and "s" for SVM
@@ -71,7 +71,7 @@ The Docker images are hosted at `ghcr.io` and will be pulled automatically by `d
 If you need to change them, you can also build them:
 ```bash
 cd src/python/
-docker build -t ghcr.io/webis-de/acl22-value-classification:0.1.0-cuda11.3 --build-arg CUDA=cuda11.3 .
-docker build -t ghcr.io/webis-de/acl22-value-classification:0.1.0-nocuda --build-arg CUDA=nocuda .
+docker build -t ghcr.io/webis-de/acl22-value-classification:0.1.1-cuda11.3 --build-arg CUDA=cuda11.3 .
+docker build -t ghcr.io/webis-de/acl22-value-classification:0.1.1-nocuda --build-arg CUDA=nocuda .
 ```
 

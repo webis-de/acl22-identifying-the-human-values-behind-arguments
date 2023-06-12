@@ -1,4 +1,4 @@
-transformers==4.9.1
+transformers==4.30.0
 datasets==1.10.2
 sklearn
 pandas

@@ -1,4 +1,7 @@
-transformers==4.9.1
-datasets==1.10.2
-sklearn
+accelerate>=0.20.1
+datasets==2.12.0
+ipywidgets
+jupyterlab
 pandas
+scikit-learn
+transformers==4.30.0

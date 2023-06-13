@@ -12,14 +12,14 @@ Requirements:
 
 Download the dataset from [Zenodo](https://doi.org/10.5281/zenodo.5657250) and extract it in the main directory:
 ```bash
-$ wget https://zenodo.org/record/6855004/files/webis-argvalues-22.zip
-$ unzip webis-argvalues-22.zip
+wget https://zenodo.org/record/6855004/files/webis-argvalues-22.zip
+unzip webis-argvalues-22.zip
 ```
 
 Download the models:
 ```bash
-$ wget https://zenodo.org/record/6855004/files/models.zip
-$ unzip models.zip
+wget https://zenodo.org/record/6855004/files/models.zip
+unzip models.zip
 ```
 Or [train them yourself](#train-classification-models).
 
@@ -43,7 +43,7 @@ docker run --rm -it --init $GPUS \
 ## Evaluate
 Calculate for each model the label-wise and mean _Precision_, _Recall_, _F1-Score_, and _Accuracy_.
 ```bash
-$ Rscript src/R/Evaluation.R --data-dir webis-argvalues-22/ --predictions predictions.tsv
+Rscript src/R/Evaluation.R --data-dir webis-argvalues-22/ --predictions predictions.tsv
 ```
 
 Note that the result does vary for BERT after re-training due to randomness in the training process. We had to re-train our models after the publication, so expect to get slightly different results to the publication even with the models we published. In our retries, however, the conclusions we draw in the publication were still valid.

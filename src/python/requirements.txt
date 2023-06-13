@@ -1,4 +1,5 @@
-transformers==4.30.0
-datasets==1.10.2
-sklearn
+accelerate>=0.20.1
+datasets==2.12.0
 pandas
+scikit-learn
+transformers==4.30.0
